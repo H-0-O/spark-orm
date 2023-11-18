@@ -52,15 +52,16 @@ impl<'a> ModelGenerator<'a> {
             pub async fn create_indexes(&self , db: &mongodb::Database , collection_name: &str){
                 let uniques : Vec<&'static str>  = vec![#body_list];
                 static INITIAL: once_cell::sync::OnceCell<()> = once_cell::sync::OnceCell::new();
+                // TODO problem is : the uniques and other variable can't move into the spawn
                 INITIAL.get_or_init( ||{
-                    uniques.iter().for_each(|field|{
-                        let name = format!("__{}__" , field).to_owned();
-                        let clonedd_field = field.clone();
-                        tokio::spawn(async move{
-                            let index_model = rspark::utilities::create_index_on_model(clonedd_field, &name , true);
-                            let _ = db.collection::<Self>(collection_name).create_index(index_model , None).await;
-                        });
-                    });
+                    // uniques.iter().for_each(|field|{
+                    //     let name = format!("__{}__" , field).to_owned();
+                    //     let clonedd_field = field.clone();
+                    //     tokio::spawn(async move{
+                    //         let index_model = rspark::utilities::create_index_on_model(clonedd_field, &name , true);
+                    //         let _ = db.collection::<Self>(collection_name).create_index(index_model , None).await;
+                    //     });
+                    // });
                 });
             }
         }
