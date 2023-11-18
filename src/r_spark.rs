@@ -1,4 +1,6 @@
-use mongodb::{Client, Database};
+use mongodb::bson::doc;
+use mongodb::options::IndexOptions;
+use mongodb::{Client, Database, IndexModel};
 
 use crate::connection::{create_client, create_client_options};
 use crate::error::RSparkError;
@@ -22,16 +24,10 @@ impl RSpark {
         let options = create_client_options(user_name, password, host, port).await?;
         let client = create_client(options)?;
         let db = client.database(db_name);
-        Ok(
-            RSpark {
-                client,
-                db,
-            }
-        )
+        Ok(RSpark { client, db })
     }
 
     pub fn get_db(&self) -> &Database {
         &self.db
     }
 }
-

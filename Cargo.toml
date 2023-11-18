@@ -9,13 +9,13 @@ edition = "2021"
 async-once-cell = "0.5.3"
 mongodb = "2.7.1"
 once_cell = "1.18.0"
+quote = "1.0.33"
 rspark-derive = {version = "0.0.1" , path = "derive"}
 serde = { version = "1.0.192", features = ["derive"] }
-
+tokio = { version = "1.34.0" , features = ["rt" , "macros"] }
 [dev-dependencies]
-tokio = "1.34.0"
 
 [workspace]
 members = [
-    "derive"
+    "derive",
 ]
