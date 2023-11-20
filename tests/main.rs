@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize, Serializer};
 use rspark::Model;
 use rspark::RSpark;
 
-#[derive(Model)]
+#[derive(Model, Serialize)]
 pub struct Book {
     #[model(unique)]
     name: String,

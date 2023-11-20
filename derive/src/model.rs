@@ -1,12 +1,3 @@
-#![allow(
-    dead_code,
-    unused_variables,
-    unused_imports,
-    unused_imports,
-    unused_mut,
-    non_camel_case_types
-)]
-
 use std::collections::HashSet;
 
 use once_cell::sync::OnceCell;
@@ -16,7 +7,7 @@ use quote::{format_ident, quote, quote_spanned, ToTokens, TokenStreamExt};
 use syn::spanned::Spanned;
 use syn::{Attribute, Data, DeriveInput, Field, Fields, FieldsNamed, Generics, Ident};
 
-use crate::model::index::__indexes;
+use crate::model::index::IndexManager;
 
 mod constructor;
 mod index;
@@ -30,14 +21,25 @@ impl __struct {
     pub fn new(input: DeriveInput) -> Self {
         Self(input)
     }
+    /// Generates the implementation code for the custom model.
+    ///
+    /// This method takes the struct annotated with the `model` trait and produces the necessary
+    /// implementation code for the associated custom model. It includes the construction logic
+    /// and index registration for the model's fields. The generated implementation is ready for use
+    /// when deriving the custom model for the specified struct.
+    ///
+    /// # Returns
+    ///
+    /// A `TokenStream` representing the implementation code for the custom model.
+    ///
     pub fn generate_impl(self) -> TokenStream {
         //TODO collection name must get from the developer and the ident must be default for it
         let collection_name = self.0.ident.to_string();
         let model_name = self.0.ident;
         let fields_name = Self::extract_struct_fields(&self.0.data);
-        let constructor = constructor::__constructor(fields_name, &collection_name);
+        let constructor = constructor::generate_constructor(fields_name, &collection_name);
         let (impl_generics, type_generics, where_generics) = self.0.generics.split_for_impl();
-        let index_register = __indexes::new().__register_indexes(fields_name);
+        let index_register = IndexManager::new().register_indexes(fields_name);
         quote! {
            impl #impl_generics #model_name #type_generics #where_generics {
                 #constructor
@@ -46,19 +48,37 @@ impl __struct {
         }
     }
 
-    fn get_model_name(&self) -> String {
-        format_ident!("Model{}", self.0.ident).to_string()
-    }
-
+    /// Extracts the named fields from the struct data.
+    ///
+    /// This method is responsible for extracting the named fields from the struct data
+    /// and returning them for further processing. It is designed to handle structs
+    /// annotated with the `model` trait, ensuring that only named structs are supported.
+    ///
+    /// # Arguments
+    ///
+    /// - `data`: A reference to the struct data.
+    ///
+    /// # Returns
+    ///
+    /// A reference to the named fields within the struct data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the data structure is not a named struct, as only named structs are currently supported.
+    ///
     fn extract_struct_fields(data: &Data) -> &FieldsNamed {
         if let Data::Struct(the_data) = data {
             match &the_data.fields {
                 Fields::Named(struct_members) => {
                     return struct_members;
                 }
-                _ => unimplemented!(),
+                _ => unimplemented!("I have no idea about UnNamed or Units fields "),
             }
         }
-        unimplemented!()
+        todo!("the Enum and Union not supported yet ");
+    }
+
+    fn get_model_name(&self) -> String {
+        format_ident!("Model{}", self.0.ident).to_string()
     }
 }
