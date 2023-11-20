@@ -11,5 +11,4 @@ pub fn create_index_on_model(field_name: &str, name: &str, unique: bool) -> Inde
         })
         .options(index_options)
         .build()
-
 }
