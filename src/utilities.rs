@@ -1,4 +1,4 @@
-use mongodb::{bson::doc, options::IndexOptions, IndexModel};
+use mongodb::{bson::doc, IndexModel, options::IndexOptions};
 
 pub fn create_index_on_model(field_name: &str, name: &str, unique: bool) -> IndexModel {
     let index_options = IndexOptions::builder()

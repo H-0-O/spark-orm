@@ -1,4 +1,4 @@
-use crate::model::MODEL_TRAIT_NAME;
+use crate::model::MODEL_ATTRIBUTE_NAME;
 use proc_macro2::{Span, TokenStream, TokenTree};
 use quote::{format_ident, quote, quote_spanned};
 use std::collections::HashSet;
@@ -73,23 +73,17 @@ impl IndexManager {
     fn generate_index_registration_body(&self) -> TokenStream {
         let unique_list = Self::convert_attributes_to_list_tokens(&self.uniques);
         let index_list = Self::convert_attributes_to_list_tokens(&self.indexes);
-        let span = Span::mixed_site();
+        let span = Span::call_site();
+
         quote_spanned! {span=>
             pub async fn register_indexes (&self , db: &mongodb::Database , collection_name: &str ){
-                let uniques : Vec<&str> = vec![#unique_list];
-                let indexes : Vec<&str> =  vec![#index_list];
-                static REGISTER_INDEXES_ONCE : once_cell::sync::OnceCell<()> = once_cell::sync::OnceCell::new();
-                REGISTER_INDEXES_ONCE.get_or_init(||{
-                    println!("Hello in do once");
-                              // uniques.iter().for_each(|field|{
-                    //     let name = format!("__{}__" , field).to_owned();
-                    //     let clonedd_field = field.clone();
-                    //     tokio::spawn(async move{
-                    //         let index_model = rspark::utilities::create_index_on_model(clonedd_field, &name , true);
-                    //         let _ = db.collection::<Self>(collection_name).create_index(index_model , None).await;
-                    //     });
-                    // });
-                });
+                let uniques : Vec<String> = vec![#unique_list];
+                let indexes : Vec<String> =  vec![#index_list];
+                static REGISTER_INDEXES_ONCE : async_once_cell::OnceCell<()> = async_once_cell::OnceCell::new();
+                REGISTER_INDEXES_ONCE.get_or_init(async{
+                    // Self::process_attributes(uniques,  db, collection_name ).await;
+                    // println!("This is the un {:?} " , uniques);
+                }).await;
             }
         }
     }
@@ -138,7 +132,7 @@ impl IndexManager {
         let mut list = quote!();
         attributes.iter().for_each(|attr_name| {
             list = quote_spanned! {span=>
-                #list #attr_name ,
+                #list #attr_name.to_string() ,
             };
         });
         list
@@ -155,7 +149,7 @@ impl IndexManager {
     /// `true` if the attribute is associated with the model trait; otherwise, `false`.
     ///
     fn is_model_attribute(attr: &Attribute) -> bool {
-        attr.meta.path().is_ident(&MODEL_TRAIT_NAME)
+        attr.meta.path().is_ident(&MODEL_ATTRIBUTE_NAME)
     }
     /// Checks whether the given attribute is applied in the outer attribute style.
     ///

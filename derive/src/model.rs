@@ -1,18 +1,15 @@
-use std::collections::HashSet;
-
-use once_cell::sync::OnceCell;
 use proc_macro2::TokenStream;
+use quote::{format_ident, quote, TokenStreamExt, ToTokens};
 use quote::__private::ext::RepToTokensExt;
-use quote::{format_ident, quote, quote_spanned, ToTokens, TokenStreamExt};
+use syn::{Data, DeriveInput, Fields, FieldsNamed};
 use syn::spanned::Spanned;
-use syn::{Attribute, Data, DeriveInput, Field, Fields, FieldsNamed, Generics, Ident};
 
 use crate::model::index::IndexManager;
 
 mod constructor;
 mod index;
-
-const MODEL_TRAIT_NAME: &'static str = "model";
+const MODEL_ATTRIBUTE_NAME: &'static str = "model";
+const MODEL_TRAIT_NAME: &'static str = "TModel";
 
 /// This generate a custom model for each one struct that becomes to a model
 /// generate the trait Model{struct name} ex( ModelUser ) and create the constructor and relations for it
@@ -20,6 +17,16 @@ pub struct __struct(DeriveInput);
 impl __struct {
     pub fn new(input: DeriveInput) -> Self {
         Self(input)
+    }
+
+    pub fn generate_trait(&self) -> TokenStream{
+        let collection_name = self.0.ident.to_string();
+        let model_name = &self.0.ident;
+        let trait_name = format_ident!("{}" ,MODEL_TRAIT_NAME);
+        let (impl_generics, type_generics, where_generics) = self.0.generics.split_for_impl();
+        quote!{
+            impl #impl_generics #trait_name for  #model_name #type_generics #where_generics {}
+        }
     }
     /// Generates the implementation code for the custom model.
     ///
@@ -32,18 +39,18 @@ impl __struct {
     ///
     /// A `TokenStream` representing the implementation code for the custom model.
     ///
-    pub fn generate_impl(self) -> TokenStream {
+    pub fn generate_impl(&self) -> TokenStream {
         //TODO collection name must get from the developer and the ident must be default for it
         let collection_name = self.0.ident.to_string();
-        let model_name = self.0.ident;
+        let model_name = &self.0.ident;
         let fields_name = Self::extract_struct_fields(&self.0.data);
         let constructor = constructor::generate_constructor(fields_name, &collection_name);
         let (impl_generics, type_generics, where_generics) = self.0.generics.split_for_impl();
-        let index_register = IndexManager::new().register_indexes(fields_name);
+        // TODO adapt with new structure
+        // let index_register = IndexManager::new().register_indexes(fields_name);
         quote! {
            impl #impl_generics #model_name #type_generics #where_generics {
                 #constructor
-                #index_register
             }
         }
     }

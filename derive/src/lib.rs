@@ -58,13 +58,17 @@ mod utility;
 pub fn model(input: TokenStream) -> TokenStream {
     // Parse the input into a DeriveInput struct
     let input = parse_macro_input!(input as DeriveInput);
+
     // Create a new instance of the __struct struct to process the input
     let model = __struct::new(input);
+    let the_trait = model.generate_trait();
     // Generate the implementation of the Model trait
     let the_impl = model.generate_impl();
     // Create the expanded TokenStream containing the generated code
     let expanded = quote! {
+        #the_trait
         #the_impl
     };
+    // println!("the expanded {:?} " , expanded.to_string() );
     TokenStream::from(expanded)
 }

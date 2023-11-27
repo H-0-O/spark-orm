@@ -1,7 +1,7 @@
-use proc_macro2::{Ident, TokenStream};
-use quote::{format_ident, quote, quote_spanned};
-use syn::spanned::Spanned;
+use proc_macro2::TokenStream;
+use quote::{quote, quote_spanned, ToTokens};
 use syn::{Field, FieldsNamed};
+use syn::spanned::Spanned;
 
 /// Generates the constructor function for the custom model.
 ///
@@ -21,15 +21,21 @@ pub(in crate::model) fn generate_constructor(
     collection_name: &str,
 ) -> TokenStream {
     //TODO later collection_name must define near the model macro
+    let db_field = fields_named.named.iter().find(|item|{
+        item.ident.as_ref().unwrap().to_string() == "db"
+    });
+    if let Some(dbf) = db_field{
+        println!("the Field is fulllllllllllllll " );
+    }else{
+        println!("the Field is not fulllllllllllllll " );
+    }
     let parameters = generate_constructor_parameters(fields_named);
     let struct_instance = generate_struct_instance(fields_named);
     quote!(
-        async fn new(#parameters db: &mongodb::Database) -> Result<Self , ()>{
+        async fn new(#parameters) -> Result<Self , ()>{
             let instance = Self {
                 #struct_instance
             };
-
-            instance.register_indexes(db , #collection_name).await;
             Ok(instance)
         }
     )
