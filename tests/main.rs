@@ -12,7 +12,10 @@ use mongodb::{Client, Database};
 use serde::{Deserialize, Serialize, Serializer};
 
 use rspark::{Model, RSpark, TModel};
+use rspark::utilities::add_coll_name;
+
 #[derive(Model, Serialize, Debug, Deserialize)]
+#[coll_name = "Books"]
 pub struct Book {
     #[model(unique)]
     name: String,

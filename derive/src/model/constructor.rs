@@ -11,24 +11,14 @@ use syn::spanned::Spanned;
 /// # Arguments
 ///
 /// - `fields_named`: A reference to the named fields of the struct.
-/// - `collection_name`: The name of the MongoDB collection associated with the struct.
 ///
 /// # Returns
 ///
 /// A `TokenStream` representing the generated constructor function
 pub(in crate::model) fn generate_constructor(
     fields_named: &FieldsNamed,
-    collection_name: &str,
+    set_collection_name : TokenStream
 ) -> TokenStream {
-    //TODO later collection_name must define near the model macro
-    let db_field = fields_named.named.iter().find(|item|{
-        item.ident.as_ref().unwrap().to_string() == "db"
-    });
-    if let Some(dbf) = db_field{
-        println!("the Field is fulllllllllllllll " );
-    }else{
-        println!("the Field is not fulllllllllllllll " );
-    }
     let parameters = generate_constructor_parameters(fields_named);
     let struct_instance = generate_struct_instance(fields_named);
     quote!(
@@ -36,6 +26,7 @@ pub(in crate::model) fn generate_constructor(
             let instance = Self {
                 #struct_instance
             };
+           #set_collection_name
             Ok(instance)
         }
     )

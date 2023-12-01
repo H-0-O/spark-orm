@@ -1,12 +1,13 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, TokenStreamExt, ToTokens};
 use quote::__private::ext::RepToTokensExt;
-use syn::{Data, DeriveInput, Fields, FieldsNamed};
+use syn::{Data, DeriveInput, Fields, FieldsNamed, Meta};
 use syn::spanned::Spanned;
 
 use crate::model::index::IndexManager;
 
 mod constructor;
+mod attrs;
 mod index;
 const MODEL_ATTRIBUTE_NAME: &'static str = "model";
 const MODEL_TRAIT_NAME: &'static str = "TModel";
@@ -41,10 +42,10 @@ impl __struct {
     ///
     pub fn generate_impl(&self) -> TokenStream {
         //TODO collection name must get from the developer and the ident must be default for it
-        let collection_name = self.0.ident.to_string();
         let model_name = &self.0.ident;
         let fields_name = Self::extract_struct_fields(&self.0.data);
-        let constructor = constructor::generate_constructor(fields_name, &collection_name);
+        let set_collection_name = attrs::generate_store_collection_name(&self.0.attrs , model_name);
+        let constructor = constructor::generate_constructor(fields_name , set_collection_name);
         let (impl_generics, type_generics, where_generics) = self.0.generics.split_for_impl();
         // TODO adapt with new structure
         // let index_register = IndexManager::new().register_indexes(fields_name);

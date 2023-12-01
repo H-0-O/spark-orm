@@ -54,7 +54,7 @@ mod utility;
 ///
 /// A `TokenStream` representing the expanded code with the generated implementation
 /// of the `Model` trait for the input struct.
-#[proc_macro_derive(Model, attributes(model))]
+#[proc_macro_derive(Model, attributes(model , coll_name))]
 pub fn model(input: TokenStream) -> TokenStream {
     // Parse the input into a DeriveInput struct
     let input = parse_macro_input!(input as DeriveInput);
