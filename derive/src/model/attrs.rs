@@ -13,7 +13,7 @@ fn get_collection_name(attrs: &Vec<Attribute> ) -> Option<TokenStream>{
     None
 }
 
-pub  fn generate_store_collection_name(attrs: &Vec<Attribute> , model_name: &Ident) -> TokenStream{
+pub  fn generate_get_collection_name(attrs: &Vec<Attribute> , model_name: &Ident) -> TokenStream{
     let mut name;
     if let Some(col_name) = get_collection_name(attrs){
         name = col_name.to_string();
@@ -21,6 +21,8 @@ pub  fn generate_store_collection_name(attrs: &Vec<Attribute> , model_name: &Ide
         name = model_name.to_string();
     }
     quote! {
-            rspark::utilities::add_coll_name(#name);
+        fn get_collection_name() -> String{
+           #name
+        }   
     }
 }

@@ -24,7 +24,7 @@ where
         let collection = db.collection::<Struct>(collection_name);
         collection.insert_one(self.borrow(), None).await.unwrap();
     }
-
+    fn get_collection_name() -> String;
     async fn all() -> Result<Cursor<Self>> {
         let coll = Self::get_collection();
         coll.find(None, None).await
@@ -44,7 +44,7 @@ where
     }
     fn get_collection() -> Collection<Self> {
         let db = RSpark::get_db();
-        db.collection::<Self>("Book")
+        db.collection::<Self>(&Self::get_collection_name())
     }
     async fn process_attributes(attributes: Vec<String>, collection_name: &str) {
         for attribute in attributes {

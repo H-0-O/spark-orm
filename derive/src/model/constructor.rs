@@ -17,7 +17,6 @@ use syn::spanned::Spanned;
 /// A `TokenStream` representing the generated constructor function
 pub(in crate::model) fn generate_constructor(
     fields_named: &FieldsNamed,
-    set_collection_name : TokenStream
 ) -> TokenStream {
     let parameters = generate_constructor_parameters(fields_named);
     let struct_instance = generate_struct_instance(fields_named);
@@ -26,7 +25,6 @@ pub(in crate::model) fn generate_constructor(
             let instance = Self {
                 #struct_instance
             };
-           #set_collection_name
             Ok(instance)
         }
     )
