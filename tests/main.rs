@@ -3,21 +3,19 @@
 use std::collections::HashMap;
 use std::env;
 use std::ops::Add;
+use std::pin::Pin;
 use std::sync::Mutex;
-
-use mongodb::{Client, Database};
-use mongodb::bson::doc;
+use std::task::{Context, Poll};
 use mongodb::bson::spec::BinarySubtype::UserDefined;
 use mongodb::options::ClientOptions;
+use mongodb::{Client, Database};
 use serde::{Deserialize, Serialize, Serializer};
 
-use rspark::{Model, RSpark , TModel};
-
-#[derive(Model, Serialize, Debug)]
+use rspark::{Model, RSpark, TModel};
+#[derive(Model, Serialize, Debug, Deserialize)]
 pub struct Book {
     #[model(unique)]
     name: String,
-    #[model(unique)]
     author: String,
     the_type: String,
 }
@@ -35,16 +33,10 @@ async fn main_test() {
 }
 // TODO create a thread test for testing global db in thread
 
-pub async fn create_client_options(
-    user_name: &str,
-    password: &str,
-    host: &str,
-    port: &str,
-) -> ClientOptions {
-    let connection_string = format!("mongodb://{}:{}@{}:{}", user_name, password, host, port);
-    let client_options = ClientOptions::parse(connection_string).await;
-    match client_options {
-        Ok(otp) => otp,
-        Err(err) => panic!("P"),
-    }
+#[tokio::test]
+async fn test_all() {
+    RSpark::connect("admin", "123", "localhost", "27019", "main_db").await;
+    Book::all_with_callback(|book|{
+        println!("the Book name is {:?} " , book.name);
+    }).await;
 }

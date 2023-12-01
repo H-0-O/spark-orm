@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.74"
+futures = "0.3.29"
 mongodb = "2.7.1"
 once_cell = "1.18.0"
 quote = "1.0.33"
