@@ -13,6 +13,7 @@ mod index;
 const MODEL_ATTRIBUTE_NAME: &'static str = "model";
 const MODEL_TRAIT_NAME: &'static str = "TModel";
 
+const BASE_MODEL_STRUCT_NAME: &'static str = "BaseModel";
 /// This generate a custom model for each one struct that becomes to a model
 /// generate the trait Model{struct name} ex( ModelUser ) and create the constructor and relations for it
 pub struct __struct(DeriveInput);
@@ -48,6 +49,7 @@ impl __struct {
         let model_name = &self.0.ident;
         let fields_name = Self::extract_struct_fields(&self.0.data);
         let constructor = constructor::generate_constructor(fields_name);
+        println!("The construct {:?} " , constructor.to_string());
         let (impl_generics, type_generics, where_generics) = self.0.generics.split_for_impl();
         // TODO adapt with new structure
         // let index_register = IndexManager::new().register_indexes(fields_name);

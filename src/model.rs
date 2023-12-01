@@ -2,13 +2,22 @@ use std::borrow::Borrow;
 
 use async_trait::async_trait;
 use futures::StreamExt;
-use mongodb::{Collection, Cursor};
+use mongodb::{Collection, Cursor, Database};
+use mongodb::bson::oid::ObjectId;
 use mongodb::error::Result;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::RSpark;
 use crate::utilities::create_index_on_model;
+
+pub struct BaseModel<'a, T> {
+    pub id: Option<ObjectId>,
+    pub inner: Box<T>,
+    pub db: &'a Database,
+    pub collection_name : &'a str
+}
+
 
 //TODO write a doc for all methods in here
 #[async_trait(?Send)]
@@ -29,18 +38,16 @@ where
         let coll = Self::get_collection();
         coll.find(None, None).await
     }
-    async fn all_with_callback< F: Fn(Self) >(callback: F ){
+    async fn all_with_callback<F: Fn(Self)>(callback: F) {
         let coll = Self::get_collection();
-        let stream_curs = coll.find(None , None).await;
+        let stream_curs = coll.find(None, None).await;
         if let Ok(mut docs) = stream_curs {
             while let Some(res_doc) = docs.next().await {
-                if let Ok(doc) = res_doc{
+                if let Ok(doc) = res_doc {
                     callback(doc);
                 }
             }
         }
-
-
     }
     fn get_collection() -> Collection<Self> {
         let db = RSpark::get_db();

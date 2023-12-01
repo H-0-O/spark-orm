@@ -2,7 +2,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{Attribute, Meta};
 
-fn get_collection_name(attrs: &Vec<Attribute> ) -> Option<TokenStream>{
+pub(crate) fn get_collection_name(attrs: &Vec<Attribute> ) -> Option<TokenStream>{
     for attr in attrs{
         if let Meta::NameValue(named_attr) = &attr.meta{
             if named_attr.path.is_ident("coll_name"){
@@ -22,7 +22,7 @@ pub  fn generate_get_collection_name(attrs: &Vec<Attribute> , model_name: &Ident
     }
     quote! {
         fn get_collection_name() -> String{
-           #name
+           #name.to_string()
         }   
     }
 }

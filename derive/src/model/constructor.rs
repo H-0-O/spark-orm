@@ -2,6 +2,7 @@ use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::{Field, FieldsNamed};
 use syn::spanned::Spanned;
+use crate::model::attrs::{generate_get_collection_name, get_collection_name};
 
 /// Generates the constructor function for the custom model.
 ///
@@ -20,12 +21,15 @@ pub(in crate::model) fn generate_constructor(
 ) -> TokenStream {
     let parameters = generate_constructor_parameters(fields_named);
     let struct_instance = generate_struct_instance(fields_named);
+   let st_model = generate_st_model_instance();
     quote!(
-        async fn new(#parameters) -> Result<Self , ()>{
-            let instance = Self {
+        async fn new<'a>(db: &'a Database , #parameters) -> Result<STModel<'a , Self> , ()>{
+            let inner_instance = Self {
                 #struct_instance
             };
-            Ok(instance)
+            Ok(
+              #st_model
+            )
         }
     )
 }
@@ -83,4 +87,16 @@ fn generate_struct_instance(fields_named: &FieldsNamed) -> TokenStream {
         }
     });
     body_params
+}
+
+fn generate_st_model_instance() -> TokenStream{
+
+    quote!{
+         STModel{
+                    id: None,
+                    inner: Box::new(inner_instance),
+                    db: db,
+
+        }
+    }
 }
