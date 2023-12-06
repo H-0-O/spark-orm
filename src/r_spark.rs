@@ -37,4 +37,18 @@ impl RSpark {
             None => panic!("The Data base not set !!!"),
         }
     }
+
+
+    pub(crate) fn from_mongo_result<T>(re : mongodb::error::Result<T>) -> crate::error::Result<T> {
+        match re {
+            Ok(inner_re) => {
+                Ok(inner_re)
+            },
+            Err(error) => {
+                Err(
+                    RSparkError::new(&error.to_string())
+                )
+            }
+        }
+    }
 }

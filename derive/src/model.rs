@@ -1,11 +1,10 @@
+use std::fmt::Display;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, TokenStreamExt, ToTokens};
 use quote::__private::ext::RepToTokensExt;
-use syn::{Data, DeriveInput, Fields, FieldsNamed, Meta};
-use syn::spanned::Spanned;
-use crate::model::attrs::{generate_get_collection_name };
+use quote::spanned::Spanned;
+use syn::{Data, DeriveInput, Fields, FieldsNamed};
 
-use crate::model::index::IndexManager;
 
 mod constructor;
 mod attrs;
@@ -25,12 +24,9 @@ impl __struct {
     pub fn generate_trait(&self) -> TokenStream{
         let model_name = &self.0.ident;
         let trait_name = format_ident!("{}" ,MODEL_TRAIT_NAME);
-        let collection_name_function = generate_get_collection_name(&self.0.attrs , &self.0.ident); 
         let (impl_generics, type_generics, where_generics) = self.0.generics.split_for_impl();
         quote!{
-            impl #impl_generics #trait_name for  #model_name #type_generics #where_generics {
-                #collection_name_function
-            }
+            impl #impl_generics #trait_name for  #model_name #type_generics #where_generics {}
         }
     }
     /// Generates the implementation code for the custom model.
@@ -45,14 +41,11 @@ impl __struct {
     /// A `TokenStream` representing the implementation code for the custom model.
     ///
     pub fn generate_impl(&self) -> TokenStream {
-        //TODO collection name must get from the developer and the ident must be default for it
         let model_name = &self.0.ident;
         let fields_name = Self::extract_struct_fields(&self.0.data);
-        let constructor = constructor::generate_constructor(fields_name);
-        println!("The construct {:?} " , constructor.to_string());
+        let constructor = self.generate_constructor(fields_name);
         let (impl_generics, type_generics, where_generics) = self.0.generics.split_for_impl();
         // TODO adapt with new structure
-        // let index_register = IndexManager::new().register_indexes(fields_name);
         quote! {
            impl #impl_generics #model_name #type_generics #where_generics {
                 #constructor

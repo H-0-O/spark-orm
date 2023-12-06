@@ -26,7 +26,7 @@ async fn main_test() {
 
     let db = RSpark::connect("admin", "123", "localhost", "27019", "main_db").await;
 
-    let  my_book = Book::new(
+    let mut my_book = Book::new(
         &*db,
         "Hossein ".to_string(),
         "Salehi".to_string(),
@@ -34,8 +34,7 @@ async fn main_test() {
     )
     .await
     .unwrap();
-
-
+    let re = my_book.save().await;
     // my_book.save("Book").await;
 }
 // TODO create a thread test for testing global db in thread

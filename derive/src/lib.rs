@@ -70,5 +70,6 @@ pub fn model(input: TokenStream) -> TokenStream {
         #the_impl
     };
     // println!("the expanded {:?} " , expanded.to_string() );
-    TokenStream::from(expanded)
+    // TokenStream::from(expanded)
+    expanded.into()
 }

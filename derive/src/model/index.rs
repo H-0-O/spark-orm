@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use syn::spanned::Spanned;
 use syn::{Attribute, Field, FieldsNamed, Meta};
 ///Manages the index-related attributes for a model.
-
+//TODO index manager must be part of __struct and indexes must go to BaseModel
 /// In our database setup, we establish index fields for all attributes marked with indexing specifications,
 /// such as unique or index constraints.
 /// This work is performed only once during the initial instantiation of our model when creating an instance for the first time,
