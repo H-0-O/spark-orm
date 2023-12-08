@@ -29,21 +29,14 @@ impl __struct {
         &self,
         fields_named: &FieldsNamed,
     ) -> TokenStream {
-        let parameters = self.generate_constructor_parameters(fields_named);
         let struct_instance = self.generate_struct_instance(fields_named);
         let st_model = self.generate_base_model_instance();
         let base_model_name = self.get_base_model_ident();
-
-        quote!(
-        async fn new<'a>(db: &'a Database , #parameters) -> Result<#base_model_name<'a , Self> , ()>{
-            let inner_instance = Self {
-                #struct_instance
-            };
-            Ok(
-              #st_model
-            )
+        quote! {
+                async fn new<'a>(db: &'a Database) -> #base_model_name<'a , Self> {
+                #st_model
+            }
         }
-    )
     }
 
     /// Generates the function parameters for the constructor.
@@ -107,7 +100,7 @@ impl __struct {
         quote! {
          #name{
                     id: None,
-                    inner: Box::new(inner_instance),
+                    inner: Box::new(None),
                     db: db,
                     collection_name: #collection_name
         }
