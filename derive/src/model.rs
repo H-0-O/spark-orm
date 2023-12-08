@@ -10,7 +10,7 @@ mod constructor;
 mod attrs;
 mod index;
 const MODEL_ATTRIBUTE_NAME: &'static str = "model";
-const MODEL_TRAIT_NAME: &'static str = "TModel";
+const INNER_CRUD_TRAIT_NAME: &'static str = "InnerCRUD";
 
 const BASE_MODEL_STRUCT_NAME: &'static str = "BaseModel";
 /// This generate a custom model for each one struct that becomes to a model
@@ -23,7 +23,7 @@ impl __struct {
 
     pub fn generate_trait(&self) -> TokenStream{
         let model_name = &self.0.ident;
-        let trait_name = format_ident!("{}" ,MODEL_TRAIT_NAME);
+        let trait_name = format_ident!("{}" ,INNER_CRUD_TRAIT_NAME);
         let (impl_generics, type_generics, where_generics) = self.0.generics.split_for_impl();
         quote!{
             impl #impl_generics #trait_name for  #model_name #type_generics #where_generics {}

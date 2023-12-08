@@ -1,5 +1,5 @@
 pub use rspark_derive::*;
-pub use model::TModel;
+
 mod connection;
 mod error;
 pub mod model;
