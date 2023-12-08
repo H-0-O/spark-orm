@@ -1,16 +1,9 @@
-use mongodb::Database;
 use mongodb::bson::doc;
+use mongodb::Database;
 use serde::{Deserialize, Serialize};
 
-use rspark::{
-    Model,
-    model::{
-        BaseModel,
-        inner_crud::InnerCRUD,
-        crud::BaseModelCrud
-    },
-    RSpark,
-};
+use rspark::model::inner_utility::InnerUtility;
+use rspark::{model::{crud::BaseModelCrud, inner_crud::InnerCRUD, BaseModel}, Model, NoneFn, RSpark};
 
 #[derive(Model, Serialize, Debug, Deserialize)]
 #[coll_name = "Books"]
@@ -20,29 +13,35 @@ pub struct Book {
     author: String,
     the_type: String,
 }
-#[tokio::test]
-async fn main_test() {
-    let db = RSpark::connect("admin", "123", "localhost", "27019", "main_db").await;
 
-}
-// TODO create a thread test for testing global db in thread
+
 
 #[tokio::test]
-async fn test_all() {
-    RSpark::global_connect("admin", "123", "localhost", "27019", "main_db").await;
-    // Book::all_with_callback(|book|{
-    //     println!("the Book name is {:?} " , book.name);
-    // }).await;
+async fn _save() {
+    let db = get_test_db().await;
+    let mut the_book = Book::new(&db).await;
+    the_book.fill(get_book_test());
+    the_book.save().await.unwrap();
 }
 
 #[tokio::test]
-async fn _save(){
-    let db = RSpark::connect("admin", "123", "localhost", "27019", "main_db").await;
+async fn __find(){
+    let db = get_test_db().await;
     let the_book = Book::new(&db).await;
-    let fs  = the_book.find_one_with_doc(doc! {}).await.unwrap();
-    match fs {
-        Some(da) => {
-        },
-        None => {}
+    let my_fn = |book : Book |{
+        println!("THe book name is {:?} " , book.name);
+    };
+    let fs = the_book.find(Some(get_book_test()) , Some(my_fn)  ).await;
+}
+
+fn get_book_test() -> Book{
+    Book {
+        name: "Hassan".to_string(),
+        author: "Ali".to_string(),
+        the_type: "__save".to_string(),
     }
+}
+
+async  fn get_test_db() -> Database{
+    RSpark::connect("admin", "123", "localhost", "27019", "main_db").await
 }

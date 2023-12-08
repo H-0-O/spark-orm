@@ -5,10 +5,12 @@ use quote::{format_ident, quote, TokenStreamExt, ToTokens};
 use quote::__private::ext::RepToTokensExt;
 use quote::spanned::Spanned;
 use syn::{Data, DeriveInput, Fields, FieldsNamed};
+use crate::model::inner::filler;
 
 mod attrs;
 mod constructor;
 mod index;
+mod inner;
 const MODEL_ATTRIBUTE_NAME: &'static str = "model";
 const INNER_CRUD_TRAIT_NAME: &'static str = "InnerCRUD";
 
@@ -44,11 +46,12 @@ impl __struct {
         let model_name = &self.0.ident;
         let fields_name = Self::extract_struct_fields(&self.0.data);
         let constructor = self.generate_constructor(fields_name);
+        let filler = self.generate_fill_method();
         let (impl_generics, type_generics, where_generics) = self.0.generics.split_for_impl();
-        // TODO adapt with new structure
         quote! {
            impl #impl_generics #model_name #type_generics #where_generics {
                 #constructor
+                #filler
             }
         }
     }

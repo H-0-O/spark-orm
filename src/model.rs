@@ -5,7 +5,7 @@ use mongodb::Database;
 
 pub mod crud;
 pub mod inner_crud;
-
+pub mod inner_utility;
 pub struct BaseModel<'a, T> {
     pub id: Option<ObjectId>,
     pub inner: Box<Option<T>>,
