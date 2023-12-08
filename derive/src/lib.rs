@@ -16,11 +16,12 @@ extern crate syn;
 use proc_macro::TokenStream;
 use std::collections::HashSet;
 
-use crate::model::__struct;
 use proc_macro2::Ident;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
+use syn::{DeriveInput, Expr, Field, Fields, Member, parse_macro_input};
 use syn::spanned::Spanned;
-use syn::{parse_macro_input, DeriveInput, Expr, Field, Fields, Member};
+
+use crate::model::__struct;
 
 mod model;
 mod utility;
@@ -54,7 +55,7 @@ mod utility;
 ///
 /// A `TokenStream` representing the expanded code with the generated implementation
 /// of the `Model` trait for the input struct.
-#[proc_macro_derive(Model, attributes(model , coll_name))]
+#[proc_macro_derive(Model, attributes(model, coll_name))]
 pub fn model(input: TokenStream) -> TokenStream {
     // Parse the input into a DeriveInput struct
     let input = parse_macro_input!(input as DeriveInput);

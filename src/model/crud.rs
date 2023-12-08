@@ -14,7 +14,11 @@ pub trait BaseModelCrud<'a, T> {
     async fn save(&mut self) -> RSparkResult<ObjectId>;
     async fn find_one(&self, prototype: T) -> RSparkResult<Option<T>>;
     async fn find_one_with_doc(&self, prototype: Document) -> RSparkResult<Option<T>>;
-    async fn find<F: Fn(T)>(&self , prototype : Option<T> , call_back: Option<F>) -> RSparkResult<Option<Cursor<T>>>;
+    async fn find<F: Fn(T)>(
+        &self,
+        prototype: Option<T>,
+        call_back: Option<F>,
+    ) -> RSparkResult<Option<Cursor<T>>>;
     fn set_object_id(&mut self, object_id: Option<ObjectId>);
 }
 
@@ -45,21 +49,19 @@ where
     async fn find_one_with_doc(&self, prototype: Document) -> RSparkResult<Option<T>> {
         T::find_one_with_doc(prototype, self.db, self.collection_name).await
     }
-    async fn find<F: Fn(T)>(&self , prototype: Option<T> , callback: Option<F>) -> RSparkResult<Option<Cursor<T>>> {
+    async fn find<F: Fn(T)>(
+        &self,
+        prototype: Option<T>,
+        callback: Option<F>,
+    ) -> RSparkResult<Option<Cursor<T>>> {
         return if let Some(fn_call) = callback {
-            T::find_with_callback(prototype , fn_call , self.db , self.collection_name).await;
+            T::find_with_callback(prototype, fn_call, self.db, self.collection_name).await;
             Ok(None)
-        } else{
-            return match T::find(prototype , self.db , self.collection_name).await {
-                Ok(result) => {
-                    Ok(Some(result))
-                },
-                Err(error) => {
-                    Err(
-                        error
-                    )
-                }
-            }
+        } else {
+            return match T::find(prototype, self.db, self.collection_name).await {
+                Ok(result) => Ok(Some(result)),
+                Err(error) => Err(error),
+            };
         };
     }
     // fn get_object_id(&self) -> Option<ObjectId> {

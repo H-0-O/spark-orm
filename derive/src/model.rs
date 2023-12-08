@@ -1,13 +1,13 @@
 use std::fmt::Display;
+
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, TokenStreamExt, ToTokens};
 use quote::__private::ext::RepToTokensExt;
 use quote::spanned::Spanned;
 use syn::{Data, DeriveInput, Fields, FieldsNamed};
 
-
-mod constructor;
 mod attrs;
+mod constructor;
 mod index;
 const MODEL_ATTRIBUTE_NAME: &'static str = "model";
 const INNER_CRUD_TRAIT_NAME: &'static str = "InnerCRUD";
@@ -21,11 +21,11 @@ impl __struct {
         Self(input)
     }
 
-    pub fn generate_trait(&self) -> TokenStream{
+    pub fn generate_trait(&self) -> TokenStream {
         let model_name = &self.0.ident;
-        let trait_name = format_ident!("{}" ,INNER_CRUD_TRAIT_NAME);
+        let trait_name = format_ident!("{}", INNER_CRUD_TRAIT_NAME);
         let (impl_generics, type_generics, where_generics) = self.0.generics.split_for_impl();
-        quote!{
+        quote! {
             impl #impl_generics #trait_name for  #model_name #type_generics #where_generics {}
         }
     }

@@ -1,4 +1,3 @@
-
 #[derive(Debug)]
 pub struct RSparkError {
     message: String,

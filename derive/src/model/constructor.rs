@@ -4,6 +4,7 @@ use syn::{Field, FieldsNamed};
 use syn::spanned::Spanned;
 
 use crate::model::{__struct, BASE_MODEL_STRUCT_NAME};
+
 impl __struct {
     /// Generates the constructor function for the custom model.
     ///
@@ -23,12 +24,9 @@ impl __struct {
     ///                      id: None,
     ///                    inner: Box::new( Book {  name ,  author , .... } ),
     ///                     db: dbInstance,
-    ///                     collection_name: #collection_name 
+    ///                     collection_name: #collection_name
     /// }
-    pub(in crate::model) fn generate_constructor(
-        &self,
-        fields_named: &FieldsNamed,
-    ) -> TokenStream {
+    pub(in crate::model) fn generate_constructor(&self, fields_named: &FieldsNamed) -> TokenStream {
         let struct_instance = self.generate_struct_instance(fields_named);
         let st_model = self.generate_base_model_instance();
         let base_model_name = self.get_base_model_ident();
@@ -50,19 +48,19 @@ impl __struct {
     /// # Returns
     ///
     /// A `TokenStream` representing the function parameters.
-    fn generate_constructor_parameters(&self , fields_named: &FieldsNamed) -> TokenStream {
+    fn generate_constructor_parameters(&self, fields_named: &FieldsNamed) -> TokenStream {
         let mut parameters = quote!();
         fields_named.named.iter().for_each(|field: &Field| {
             let span = field.span();
             let field_name = field.ident.as_ref().unwrap();
             let field_type = &field.ty;
             let param = quote_spanned! {span=>
-            #field_name : #field_type,
-        };
+                #field_name : #field_type,
+            };
             parameters = quote! {
-            #parameters
-            #param
-        }
+                #parameters
+                #param
+            }
         });
         parameters
     }
@@ -78,18 +76,18 @@ impl __struct {
     /// # Returns
     ///
     /// A `TokenStream` representing the struct instance fields.
-    fn generate_struct_instance(&self , fields_named: &FieldsNamed) -> TokenStream {
+    fn generate_struct_instance(&self, fields_named: &FieldsNamed) -> TokenStream {
         let mut body_params = quote!();
         fields_named.named.iter().for_each(|field: &Field| {
             let span = field.span();
             let field_name = field.ident.as_ref().unwrap();
             let field = quote_spanned! {span=>
-            #field_name ,
-        };
+                #field_name ,
+            };
             body_params = quote! {
-            #body_params
-            #field
-        }
+                #body_params
+                #field
+            }
         });
         body_params
     }
@@ -98,16 +96,16 @@ impl __struct {
         let name = self.get_base_model_ident();
         let collection_name = self.get_collection_name();
         quote! {
-         #name{
-                    id: None,
-                    inner: Box::new(None),
-                    db: db,
-                    collection_name: #collection_name
+             #name{
+                        id: None,
+                        inner: Box::new(None),
+                        db: db,
+                        collection_name: #collection_name
+            }
         }
-    }
     }
 
     fn get_base_model_ident(&self) -> Ident {
-        format_ident!("{}" , BASE_MODEL_STRUCT_NAME)
+        format_ident!("{}", BASE_MODEL_STRUCT_NAME)
     }
 }

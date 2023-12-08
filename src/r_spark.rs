@@ -16,7 +16,13 @@ pub struct RSpark {
 }
 
 impl RSpark {
-    pub async fn global_connect(user_name: &str, password: &str, host: &str, port: &str, db_name: &str) -> Arc<Database> {
+    pub async fn global_connect(
+        user_name: &str,
+        password: &str,
+        host: &str,
+        port: &str,
+        db_name: &str,
+    ) -> Arc<Database> {
         let client_options = create_client_options(user_name, password, host, port)
             .await
             .unwrap();
@@ -30,7 +36,13 @@ impl RSpark {
         Self::get_db()
     }
 
-    pub async fn connect(user_name: &str, password: &str, host: &str, port: &str, db_name: &str) -> Database{
+    pub async fn connect(
+        user_name: &str,
+        password: &str,
+        host: &str,
+        port: &str,
+        db_name: &str,
+    ) -> Database {
         let client_options = create_client_options(user_name, password, host, port)
             .await
             .unwrap();
@@ -45,18 +57,12 @@ impl RSpark {
         }
     }
 
-    
-
-    pub(crate) fn from_mongo_result<T>(re: mongodb::error::Result<T>) -> crate::r_spark::RSparkResult<T> {
+    pub(crate) fn from_mongo_result<T>(
+        re: mongodb::error::Result<T>,
+    ) -> crate::r_spark::RSparkResult<T> {
         match re {
-            Ok(inner_re) => {
-                Ok(inner_re)
-            },
-            Err(error) => {
-                Err(
-                    RSparkError::new(&error.to_string())
-                )
-            }
+            Ok(inner_re) => Ok(inner_re),
+            Err(error) => Err(RSparkError::new(&error.to_string())),
         }
     }
 }

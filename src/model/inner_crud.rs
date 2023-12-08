@@ -3,9 +3,9 @@ use std::fmt::Debug;
 
 use async_trait::async_trait;
 use futures::{StreamExt, TryStreamExt};
-use mongodb::bson::{to_document, Document};
+use mongodb::{Collection, Cursor, Database};
+use mongodb::bson::{Document, to_document};
 use mongodb::results::InsertOneResult;
-use mongodb::{error::Result, Collection, Cursor, Database};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -30,25 +30,25 @@ where
         let re = collection.insert_one(self.borrow(), None).await;
         RSpark::from_mongo_result(re)
     }
-    async fn find(prototype :  Option<Self>, db: &Database, coll_name: &str) -> RSparkResult<Cursor<Self>> {
+    async fn find(
+        prototype: Option<Self>,
+        db: &Database,
+        coll_name: &str,
+    ) -> RSparkResult<Cursor<Self>> {
         let coll = Self::get_coll(db, coll_name);
         let converted = to_document(&prototype);
         match converted {
-            Ok(doc) => {
-                RSpark::from_mongo_result(
-                    coll.find(doc, None).await
-                )
-            },
-            Err(error) => {
-                Err(
-                    RSparkError::new(&error.to_string())
-                )
-            }
-
+            Ok(doc) => RSpark::from_mongo_result(coll.find(doc, None).await),
+            Err(error) => Err(RSparkError::new(&error.to_string())),
         }
     }
-    async fn find_with_callback<F: Fn(Self)>(prototype:  Option<Self> , callback: F , db: &Database, coll_name: &str) {
-        let stream_curs = Self::find(prototype , db , coll_name).await;
+    async fn find_with_callback<F: Fn(Self)>(
+        prototype: Option<Self>,
+        callback: F,
+        db: &Database,
+        coll_name: &str,
+    ) {
+        let stream_curs = Self::find(prototype, db, coll_name).await;
         if let Ok(mut docs) = stream_curs {
             while let Some(res_doc) = docs.next().await {
                 if let Ok(doc) = res_doc {
@@ -120,5 +120,4 @@ where
     fn get_coll(db: &Database, coll_name: &str) -> Collection<Self> {
         db.collection::<Self>(coll_name)
     }
-
 }

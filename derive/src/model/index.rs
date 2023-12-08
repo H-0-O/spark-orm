@@ -1,9 +1,11 @@
-use crate::model::MODEL_ATTRIBUTE_NAME;
-use proc_macro2::{Span, TokenStream, TokenTree};
-use quote::{format_ident, quote, quote_spanned};
 use std::collections::HashSet;
-use syn::spanned::Spanned;
+
+use proc_macro2::{Span, TokenStream, TokenTree};
+use quote::{quote, quote_spanned};
 use syn::{Attribute, Field, FieldsNamed, Meta};
+
+use crate::model::MODEL_ATTRIBUTE_NAME;
+
 ///Manages the index-related attributes for a model.
 //TODO index manager must be part of __struct and indexes must go to BaseModel
 /// In our database setup, we establish index fields for all attributes marked with indexing specifications,

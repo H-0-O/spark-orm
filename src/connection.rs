@@ -1,7 +1,9 @@
 use mongodb::Client;
 use mongodb::options::ClientOptions;
+
 use crate::error::RSparkError;
 use crate::r_spark::RSparkResult;
+
 pub async fn create_client_options(
     user_name: &str,
     password: &str,
