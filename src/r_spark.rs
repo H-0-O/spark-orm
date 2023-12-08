@@ -6,7 +6,7 @@ use once_cell::sync::OnceCell;
 use crate::connection::{create_client, create_client_options};
 use crate::error::RSparkError;
 
-pub type Result<T> = std::result::Result<T, RSparkError>;
+pub type RSparkResult<T> = std::result::Result<T, RSparkError>;
 pub(crate) static R_SPARK_STATIC: OnceCell<RSpark> = OnceCell::new();
 
 #[derive(Debug)]
@@ -16,7 +16,7 @@ pub struct RSpark {
 }
 
 impl RSpark {
-    pub async fn connect(user_name: &str, password: &str, host: &str, port: &str, db_name: &str)  -> Arc<Database>{
+    pub async fn global_connect(user_name: &str, password: &str, host: &str, port: &str, db_name: &str) -> Arc<Database> {
         let client_options = create_client_options(user_name, password, host, port)
             .await
             .unwrap();
@@ -30,6 +30,13 @@ impl RSpark {
         Self::get_db()
     }
 
+    pub async fn connect(user_name: &str, password: &str, host: &str, port: &str, db_name: &str) -> Database{
+        let client_options = create_client_options(user_name, password, host, port)
+            .await
+            .unwrap();
+        let client = create_client(client_options).unwrap();
+        client.database(db_name)
+    }
     pub fn get_db() -> Arc<Database> {
         let r_spark = R_SPARK_STATIC.get();
         match r_spark {
@@ -38,8 +45,9 @@ impl RSpark {
         }
     }
 
+    
 
-    pub(crate) fn from_mongo_result<T>(re : mongodb::error::Result<T>) -> crate::error::Result<T> {
+    pub(crate) fn from_mongo_result<T>(re: mongodb::error::Result<T>) -> crate::r_spark::RSparkResult<T> {
         match re {
             Ok(inner_re) => {
                 Ok(inner_re)

@@ -1,17 +1,16 @@
-#![allow(dead_code, unused_imports, unused_variables)]
+use mongodb::Database;
+use mongodb::bson::doc;
+use serde::{Deserialize, Serialize};
 
-use std::collections::HashMap;
-use std::env;
-use std::ops::Add;
-use std::pin::Pin;
-use std::sync::Mutex;
-use std::task::{Context, Poll};
-use mongodb::bson::spec::BinarySubtype::UserDefined;
-use mongodb::options::ClientOptions;
-use mongodb::{Client, Database};
-use serde::{Deserialize, Serialize, Serializer};
-
-use rspark::{Model, RSpark , model::BaseModel , TModel};
+use rspark::{
+    Model,
+    model::{
+        BaseModel,
+        inner_crud::InnerCRUD,
+        crud::BaseModelCrud
+    },
+    RSpark,
+};
 
 #[derive(Model, Serialize, Debug, Deserialize)]
 #[coll_name = "Books"]
@@ -23,26 +22,27 @@ pub struct Book {
 }
 #[tokio::test]
 async fn main_test() {
-
     let db = RSpark::connect("admin", "123", "localhost", "27019", "main_db").await;
 
-    let mut my_book = Book::new(
-        &*db,
-        "Hossein ".to_string(),
-        "Salehi".to_string(),
-        "My Success".to_string(),
-    )
-    .await
-    .unwrap();
-    let re = my_book.save().await;
-    // my_book.save("Book").await;
 }
 // TODO create a thread test for testing global db in thread
 
 #[tokio::test]
 async fn test_all() {
-    RSpark::connect("admin", "123", "localhost", "27019", "main_db").await;
-    Book::all_with_callback(|book|{
-        println!("the Book name is {:?} " , book.name);
-    }).await;
+    RSpark::global_connect("admin", "123", "localhost", "27019", "main_db").await;
+    // Book::all_with_callback(|book|{
+    //     println!("the Book name is {:?} " , book.name);
+    // }).await;
+}
+
+#[tokio::test]
+async fn _save(){
+    let db = RSpark::connect("admin", "123", "localhost", "27019", "main_db").await;
+    let the_book = Book::new(&db).await;
+    let fs  = the_book.find_one_with_doc(doc! {}).await.unwrap();
+    match fs {
+        Some(da) => {
+        },
+        None => {}
+    }
 }
