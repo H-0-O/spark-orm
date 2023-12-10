@@ -13,6 +13,7 @@ use crate::error::RSparkError;
 use crate::r_spark::{RSpark, RSparkResult};
 use crate::utilities::create_index_on_model;
 
+//TODO remove all doc method ; all function of inner_crud should just get an Document as prototype
 #[async_trait(?Send)]
 pub trait InnerCRUD
 where
@@ -31,19 +32,23 @@ where
         RSpark::from_mongo_result(re)
     }
     async fn find(
-        prototype: Option<Self>,
+        prototype: Self,
         db: &Database,
         coll_name: &str,
     ) -> RSparkResult<Cursor<Self>> {
-        let coll = Self::get_coll(db, coll_name);
         let converted = to_document(&prototype);
         match converted {
-            Ok(doc) => RSpark::from_mongo_result(coll.find(doc, None).await),
+            Ok(doc) => Self::find_with_doc(doc , db , coll_name).await,
             Err(error) => Err(RSparkError::new(&error.to_string())),
         }
     }
+    async fn find_with_doc(prototype : Document , db : &Database , coll_name: &str) -> RSparkResult<Cursor<Self>>{
+            let coll = Self::get_coll(db , coll_name);
+            let re = coll.find(prototype , None).await;
+            RSpark::from_mongo_result(re)
+    }
     async fn find_with_callback<F: Fn(Self)>(
-        prototype: Option<Self>,
+        prototype: Self,
         callback: F,
         db: &Database,
         coll_name: &str,

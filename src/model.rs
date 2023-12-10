@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 
+use mongodb::bson::Document;
 use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
+use log::log;
 
 pub mod crud;
 pub mod inner_crud;
@@ -11,4 +13,9 @@ pub struct BaseModel<'a, T> {
     pub inner: Box<Option<T>>,
     pub db: &'a Database,
     pub collection_name: &'a str,
+}
+
+pub enum Prototype<T> {
+    Doc(Document),
+    Model(T)
 }
