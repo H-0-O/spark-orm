@@ -57,7 +57,7 @@ impl RSpark {
         }
     }
 
-    pub(crate) fn from_mongo_result<T>(
+    pub fn from_mongo_result<T>(
         re: mongodb::error::Result<T>,
     ) -> crate::r_spark::RSparkResult<T> {
         match re {

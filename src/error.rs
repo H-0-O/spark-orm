@@ -9,4 +9,9 @@ impl RSparkError {
             message: message.to_string(),
         }
     }
+    pub fn to_string(&self) -> String{
+       let message = &self.message;
+        message.to_string()
+    }
 }
+

@@ -1,11 +1,13 @@
+use futures::future::err;
 use mongodb::bson::doc;
 use mongodb::Database;
+use mongodb::results::InsertOneResult;
 use serde::{Deserialize, Serialize};
 
-use rspark::{model::{BaseModel, crud::BaseModelCrud, inner_crud::InnerCRUD}, Model, RSpark};
+use rspark::{model::{BaseModel, crud::BaseModelCrud, inner_crud::InnerCRUD}, Model, RSpark, RSparkResult};
 use rspark::model::inner_utility::InnerUtility;
 use rspark::model::Prototype;
-
+use futures::{StreamExt, TryStreamExt};
 #[derive(Model, Serialize, Debug, Deserialize)]
 #[coll_name = "Books"]
 pub struct Book {
@@ -14,9 +16,8 @@ pub struct Book {
     author: String,
     the_type: String,
 }
-
-
-
+// TODO move the tests into a tests/crud.rs file 
+// TODO 
 #[tokio::test]
 async fn _save() {
     let db = get_test_db().await;
@@ -28,7 +29,22 @@ async fn _save() {
 #[tokio::test]
 async fn __find(){
     let db = get_test_db().await;
-   
+    let the_book = Book::new(&db).await;
+    let result =the_book.find(Prototype::Model(get_test_book())).await;
+    match result { 
+        Ok(mut stream) => {
+            while let Some(res_doc) = stream.next().await {
+                if let Ok(book) = res_doc {
+                    println!(" The Book is {:?} " , book );
+                }
+            }
+        },
+        Err(error) => {
+            panic!(error.to_string())
+        }
+    }
+    
+    println!("__find is passed ");
 }
 
 #[tokio::test]

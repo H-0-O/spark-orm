@@ -13,3 +13,5 @@ pub type NoneFn<T> = Option<fn(T)>;
 pub mod futures {
    pub use futures::*;
 }
+
+pub use r_spark::RSparkResult;
