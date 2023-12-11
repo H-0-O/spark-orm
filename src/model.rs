@@ -3,7 +3,6 @@
 use mongodb::bson::Document;
 use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
-use log::log;
 
 pub mod crud;
 pub mod inner_crud;
