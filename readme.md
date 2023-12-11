@@ -1,4 +1,4 @@
-# RSpark MongoDB ORM for Rust
+# RSpark MongoDB ORM for Rust  
 
 RSpark is an open-source, fast, and memory-efficient Object-Relational Mapping (ORM) library for MongoDB written in Rust. It allows seamless integration between Rust structs and MongoDB collections by automatically converting structs to models.
 
