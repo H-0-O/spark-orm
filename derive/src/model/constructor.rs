@@ -30,7 +30,8 @@ impl __struct {
         let st_model = self.generate_base_model_instance();
         let base_model_name = self.get_base_model_ident();
         quote! {
-                async fn new<'a>(db: &'a Database) -> #base_model_name<'a , Self> {
+                async fn new<'a>(db: &'a Database) -> #base_model_name<'a , Self> 
+            {
                 #st_model
             }
         }

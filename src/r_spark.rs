@@ -27,6 +27,10 @@ impl RSpark {
             .await
             .unwrap();
         let client = create_client(client_options).unwrap();
+        // client
+        //     .database("user")
+        //     .run_command(doc! {"ping": 1}, None)
+        //     .await?;
         let db = client.database(db_name);
         let rs = RSpark {
             client,

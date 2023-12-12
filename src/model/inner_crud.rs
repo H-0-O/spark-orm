@@ -2,17 +2,16 @@ use std::borrow::Borrow;
 use std::fmt::Debug;
 
 use async_trait::async_trait;
-use futures::{StreamExt, TryStreamExt};
-use futures::future::err;
+use futures::StreamExt;
+use mongodb::{Collection, Cursor, Database};
+use mongodb::bson::{doc, Document, to_document};
 use mongodb::bson::oid::ObjectId;
-use mongodb::bson::{doc, to_document, Document};
 use mongodb::options::UpdateModifications;
 use mongodb::results::InsertOneResult;
-use mongodb::{Collection, Cursor, Database};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use crate::error::RSparkError;
 
+use crate::error::RSparkError;
 use crate::r_spark::{RSpark, RSparkResult};
 use crate::utilities::create_index_on_model;
 
@@ -27,7 +26,7 @@ where
     Self: Unpin,
     Self: Sync,
     Self: Send,
-    Self: Debug,
+    // Self: Debug,
 {
     async fn save(&self, db: &Database, coll_name: &str) -> RSparkResult<InsertOneResult> {
         let collection = Self::get_coll(db, coll_name);

@@ -6,19 +6,21 @@ use mongodb::bson::to_document;
 use mongodb::Cursor;
 
 use crate::model::inner_crud::InnerCRUD;
+use crate::model::inner_utility::InnerUtility;
 use crate::model::Prototype;
 use crate::model::Prototype::{Doc, Model};
 use crate::r_spark::RSparkResult;
+use crate::utilities::convert_to_doc;
 use crate::{error::RSparkError, model::BaseModel};
 
 #[async_trait(?Send)]
 pub trait BaseModelCrud<T> {
-    async fn save(&mut self) -> RSparkResult<ObjectId>;
-    async fn update(&self) -> RSparkResult<u64>;
-    async fn find_one(&self, prototype: Prototype<T>) -> RSparkResult<Option<T>>;
-    async fn find<F: Fn(T)>(&self, prototype: Prototype<T>) -> RSparkResult<Cursor<T>>;
+    async fn save(&mut self) -> &Self;
+    async fn update(&mut self) -> &Self;
+    async fn find_one(&mut self, prototype: Prototype<T>) -> &Self;
+    async fn find(&self, prototype: Prototype<T>) -> RSparkResult<Cursor<T>>;
     async fn find_with_callback<F: Fn(T)>(&self, prototype: Prototype<T>, call_back: F);
-    fn set_object_id(&mut self, object_id: Option<ObjectId>);
+    // fn set_object_id(&mut self, object_id: Option<ObjectId>);
 }
 
 #[async_trait(?Send)]
@@ -26,49 +28,54 @@ impl<'a, T> BaseModelCrud<T> for BaseModel<'a, T>
 where
     T: InnerCRUD,
 {
-    async fn save(&mut self) -> RSparkResult<ObjectId> {
+    async fn save(&mut self) -> &Self {
         if let Some(inner) = self.inner.deref() {
             let operation_result = inner.save(self.db, self.collection_name).await;
-            return match operation_result {
+            match operation_result {
                 Ok(inner_re) => {
                     let ob_id = inner_re.inserted_id.as_object_id();
-                    if let Some(inner_ob_id) = ob_id {
-                        return Ok(inner_ob_id);
-                    }
-                    Err(RSparkError::new("The object id "))
+                    self.__set_object_id(ob_id);
                 }
-                Err(error) => Err(error),
+                Err(error) => self.__set_error(error),
             };
+        } else {
+            self.__set_error(RSparkError::new("Can not save empty document"));
         }
-        Err(RSparkError::new("Can not save empty document"))
+        self
     }
-
-    async fn update(&self) -> RSparkResult<u64> {
-
-        return match *self.inner {
+    async fn update(&mut self) -> &Self {
+        match &*self.inner {
             Some(inner) => {
                 if let Some(id) = self.id {
-                    return inner.update(&id, self.db, self.collection_name).await;
+                    let update_result = inner.update(&id, self.db, self.collection_name).await;
+                    // TODO decide about it later
                 }
-                Err(RSparkError::new("Can not update the doc"))
+                self.__set_error(RSparkError::new("Can not update the doc"));
             }
-            None => return Err(RSparkError::new("Can not update empty doc")),
+            None => self.__set_error(RSparkError::new("Can not update empty doc")),
         };
-
+        self
     }
-    async fn find_one(&self, prototype: Prototype<T>) -> RSparkResult<Option<T>> {
-        match prototype {
+    async fn find_one(&mut self, prototype: Prototype<T>) -> &Self {
+        let result = match prototype {
             Doc(doc) => T::find_one(doc, self.db, self.collection_name).await,
             Model(model) => {
-                let converted = to_document(&model);
-                return match converted {
+                let converted = convert_to_doc(model);
+                match converted {
                     Ok(doc) => T::find_one(doc, self.db, self.collection_name).await,
-                    Err(error) => Err(RSparkError::new(&error.to_string())),
-                };
+                    Err(error) => Err(error),
+                }
             }
+        };
+        match result {
+            Ok(funded) => {
+                self.__fill(funded);
+            }
+            Err(error) => self.__set_error(error),
         }
+        self
     }
-    async fn find<F: Fn(T)>(&self, prototype: Prototype<T>) -> RSparkResult<Cursor<T>> {
+    async fn find(&self, prototype: Prototype<T>) -> RSparkResult<Cursor<T>> {
         return match prototype {
             Doc(doc) => T::find(doc, self.db, self.collection_name).await,
             Model(model) => {
@@ -93,7 +100,7 @@ where
             }
         }
     }
-    fn set_object_id(&mut self, object_id: Option<ObjectId>) {
-        self.id = object_id;
-    }
+    // fn set_object_id(&mut self, object_id: Option<ObjectId>) {
+    //     self.id = object_id;
+    // }
 }
