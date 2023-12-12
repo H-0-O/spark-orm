@@ -39,12 +39,7 @@ impl __struct {
         let name = self.get_base_model_ident();
         let collection_name = self.get_collection_name();
         quote! {
-             #name{
-                        id: None,
-                        inner: Box::new(None),
-                        db: db,
-                        collection_name: #collection_name
-            }
+             #name::new(db , #collection_name )
         }
     }
 
