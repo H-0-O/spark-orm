@@ -3,21 +3,25 @@ use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
 use serde::{Deserialize, Serialize};
-use std::ops::Deref;
 use rspark::model::inner_utility::InnerUtility;
 use rspark::model::Prototype;
 use rspark::{
-    model::{crud::BaseModelCrud, inner_crud::InnerCRUD, BaseModel},
+    model::{base_model_crud::BaseModelCrud, inner_crud::InnerCRUD, BaseModel},
     Model, RSpark,
 };
 
-#[derive(Model, Serialize, Deserialize , Debug)]
+#[derive(Model, Serialize, Deserialize , Debug , Default)]
 #[coll_name = "Books"]
 pub struct Book {
     // #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     _id: Option<ObjectId>,
     #[model(unique)]
     name: String,
+    info: SubS
+}
+#[derive(Serialize , Deserialize ,Debug , Default)]
+pub struct SubS{
+    age: u64
 }
 // TODO move the tests into a tests/crud.rs file
 // TODO
@@ -25,8 +29,7 @@ pub struct Book {
 async fn _save() {
     let db = get_test_db().await;
     let mut the_book = Book::new(&db).await;
-    the_book.fill(get_test_book());
-    the_book.save().await;
+    println!("Hello {:?} " , the_book);
 }
 
 #[tokio::test]
@@ -83,6 +86,7 @@ fn get_test_book() -> Book {
     Book {
         _id: None,
         name: "Hassan".to_string(),
+        info: SubS::default()
     }
 }
 

@@ -1,5 +1,4 @@
-use std::ops::Deref;
-use crate::model::BaseModel;
+use crate::model::base_model::BaseModel;
 
 pub trait InnerUtility<T> {
     fn fill(&mut self, inner: T);
@@ -8,6 +7,6 @@ pub trait InnerUtility<T> {
 impl<'a, T> InnerUtility<T> for BaseModel<'a, T>
 {
     fn fill(&mut self, inner: T) {
-        *self.inner = Some(inner);
+        *self.inner = inner;
     }
 }

@@ -1,17 +1,14 @@
-use std::ops::Deref;
-
 use async_trait::async_trait;
-use mongodb::bson::oid::ObjectId;
 use mongodb::bson::to_document;
 use mongodb::Cursor;
 
-use crate::model::inner_crud::InnerCRUD;
-use crate::model::inner_utility::InnerUtility;
-use crate::model::Prototype;
+use crate::error::RSparkError;
+use crate::model::{InnerState, Prototype};
+use crate::model::base_model::BaseModel;
+use crate::model::crud::inner_crud::InnerCRUD;
 use crate::model::Prototype::{Doc, Model};
 use crate::r_spark::RSparkResult;
 use crate::utilities::convert_to_doc;
-use crate::{error::RSparkError, model::BaseModel};
 
 #[async_trait(?Send)]
 pub trait BaseModelCrud<T> {
@@ -29,31 +26,43 @@ where
     T: InnerCRUD,
 {
     async fn save(&mut self) -> &Self {
-        if let Some(inner) = self.inner.deref() {
-            let operation_result = inner.save(self.db, self.collection_name).await;
-            match operation_result {
-                Ok(inner_re) => {
-                    let ob_id = inner_re.inserted_id.as_object_id();
-                    self.__set_object_id(ob_id);
+        if self.is_filled(){
+            let result = self.inner.save(self.db , self.collection_name).await;
+            match result {
+                Ok(inner_result) => {
+
+                },
+                Err(error) => {
+                    self.__set_error(error);
+                    self.set_inner_state(InnerState::Default);
                 }
-                Err(error) => self.__set_error(error),
-            };
-        } else {
-            self.__set_error(RSparkError::new("Can not save empty document"));
+            }
         }
+        // if let Some(inner) = self.inner.deref() {
+        //     let operation_result = inner.save(self.db, self.collection_name).await;
+        //     match operation_result {
+        //         Ok(inner_re) => {
+        //             let ob_id = inner_re.inserted_id.as_object_id();
+        //             self.__set_object_id(ob_id);
+        //         }
+        //         Err(error) => self.__set_error(error),
+        //     };
+        // } else {
+        //     self.__set_error(RSparkError::new("Can not save empty document"));
+        // }
         self
     }
     async fn update(&mut self) -> &Self {
-        match &*self.inner {
-            Some(inner) => {
-                if let Some(id) = self.id {
-                    let update_result = inner.update(&id, self.db, self.collection_name).await;
-                    // TODO decide about it later
-                }
-                self.__set_error(RSparkError::new("Can not update the doc"));
-            }
-            None => self.__set_error(RSparkError::new("Can not update empty doc")),
-        };
+        // match &*self.inner {
+        //     Some(inner) => {
+        //         if let Some(id) = self.id {
+        //             let update_result = inner.update(&id, self.db, self.collection_name).await;
+        //             // TODO decide about it later
+        //         }
+        //         self.__set_error(RSparkError::new("Can not update the doc"));
+        //     }
+        //     None => self.__set_error(RSparkError::new("Can not update empty doc")),
+        // };
         self
     }
     async fn find_one(&mut self, prototype: Prototype<T>) -> &Self {
@@ -67,12 +76,12 @@ where
                 }
             }
         };
-        match result {
-            Ok(funded) => {
-                self.__fill(funded);
-            }
-            Err(error) => self.__set_error(error),
-        }
+        // match result {
+        //     Ok(funded) => {
+        //         self.__fill(funded);
+        //     }
+        //     Err(error) => self.__set_error(error),
+        // }
         self
     }
     async fn find(&self, prototype: Prototype<T>) -> RSparkResult<Cursor<T>> {
