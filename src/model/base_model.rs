@@ -27,15 +27,11 @@ impl<'a, T: 'a> DerefMut for BaseModel<'a, T> {
         self.inner.as_mut()
     }
 }
-
 impl<'a, T> BaseModel<'a, T> {
-    pub fn __fill(&mut self, inner: T) {
-        *self.inner = inner;
-    }
-    pub fn __set_error(&mut self, error: RSparkError) {
+    pub(crate) fn __set_error(&mut self, error: RSparkError) {
         self.last_error = Some(error);
     }
-    pub fn __set_object_id(&mut self, ob_id: Option<ObjectId>) {
+    pub(crate) fn __set_object_id(&mut self, ob_id: Option<ObjectId>) {
         self.id = ob_id;
     }
     pub fn is_filled(&self) -> bool {
@@ -49,6 +45,16 @@ impl<'a, T> BaseModel<'a, T> {
     }
     pub fn get_inner_state(&self) -> &InnerState {
         &self.inner_state
+    }
+
+    pub fn get_last_error(&self) -> Option<&RSparkError>{
+        self.last_error.as_ref()
+    }
+    pub fn has_error(&self) -> bool{
+        return match  self.last_error {
+            Some(_) => true,
+            None => false
+        }
     }
 }
 
