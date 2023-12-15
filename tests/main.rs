@@ -5,12 +5,8 @@ use mongodb::Database;
 use serde::{Deserialize, Serialize};
 
 use rspark::model::InnerState;
-use rspark::{
-    model::base_model::BaseModel, model::crud::base_model_crud::BaseModelCrud,
-    model::crud::inner_crud::InnerCRUD, model::Prototype, RSpark,
-};
+use rspark::{model::Prototype, RSpark};
 use rspark_derive::Model;
-
 #[derive(Model, Serialize, Deserialize, Debug, Default)]
 #[coll_name = "Books"]
 pub struct Book {
@@ -97,7 +93,7 @@ async fn __find_one_with_doc() {
 async fn __find_one_with_model() {
     let db = get_test_db().await;
     let mut the_book = Book::new(&db).await;
-    let prototype : Prototype<Book> = Prototype::Model(Book {
+    let prototype: Prototype<Book> = Prototype::Model(Book {
         _id: None,
         name: "The First Book".to_string(),
         other_info: OtherInfo {

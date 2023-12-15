@@ -67,6 +67,10 @@ pub fn model(input: TokenStream) -> TokenStream {
     let the_impl = model.generate_impl();
     // Create the expanded TokenStream containing the generated code
     let expanded = quote! {
+        use rspark::{
+                     model::base_model::BaseModel, model::crud::base_model_crud::BaseModelCrud,
+                    model::crud::inner_crud::InnerCRUD
+        };
         #the_trait
         #the_impl
     };
