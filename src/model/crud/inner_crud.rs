@@ -1,20 +1,19 @@
 use std::borrow::Borrow;
+use std::fmt::Debug;
 
 use async_trait::async_trait;
 use futures::StreamExt;
-use mongodb::{Collection, Cursor, Database};
-use mongodb::bson::{doc, Document, to_document};
 use mongodb::bson::oid::ObjectId;
-use mongodb::options::UpdateModifications;
+use mongodb::bson::{doc, Document};
 use mongodb::results::InsertOneResult;
+use mongodb::{Collection, Cursor, Database};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::error::RSparkError;
 use crate::r_spark::{RSpark, RSparkResult};
-use crate::utilities::create_index_on_model;
 
-//TODO remove all doc method ; all function of inner_crud should just get an Document as prototype
+
 #[async_trait(?Send)]
 pub trait InnerCRUD
 where
@@ -25,44 +24,33 @@ where
     Self: Unpin,
     Self: Sync,
     Self: Send,
-    // Self: Debug,
+    Self: Debug,
 {
-    async fn save(&self, db: &Database, coll_name: &str) -> RSparkResult<InsertOneResult> {
+    async fn save(inner: &Self, db: &Database, coll_name: &str) -> RSparkResult<InsertOneResult> {
         let collection = Self::get_coll(db, coll_name);
-        let re = collection.insert_one(self.borrow(), None).await;
+        let re = collection.insert_one(inner, None).await;
         RSpark::from_mongo_result(re)
     }
 
-    async fn update(&self, object_id: &ObjectId, db: &Database, coll_name: &str) -> RSparkResult<u64> {
+    async fn update(
+        object_id: &ObjectId,
+        inner: Document,
+        db: &Database,
+        coll_name: &str,
+    ) -> RSparkResult<u64> {
         let coll = Self::get_coll(db, coll_name);
-        let converted = to_document(self);
-        match converted {
-            Ok(doc) => {
-                let update_doc = UpdateModifications::Document(doc);
-                //TODO Turn off upsert for this function
-                let result = coll
-                    .update_one(
-                        doc! {
-                            "_id" : object_id
-                        },
-                        update_doc,
-                        None,
-                    )
-                    .await;
-                match result { 
-                    Ok(inner_result) => {
-                        Ok(inner_result.modified_count)
-                    },
-                    Err(error) => Err(
-                        RSparkError::new(&error.to_string())
-                    )
-                }
-            }
-            Err(error) => Err(
-                RSparkError::new(
-                    &error.to_string()
-                )
+        let result = coll
+            .update_one(
+                doc! {
+                    "_id" : object_id
+                },
+                inner,
+                None,
             )
+            .await;
+        match result {
+            Ok(inner_result) => Ok(inner_result.modified_count),
+            Err(error) => Err(RSparkError::new(&error.to_string())),
         }
     }
     async fn find(
@@ -99,21 +87,21 @@ where
     }
     async fn process_attributes(attributes: Vec<String>, collection_name: &str) {
         todo!();
-        for attribute in attributes {
-            let db = RSpark::get_db();
-            let name = format!("__{}__", &attribute);
-            let index_model = create_index_on_model(&attribute, &name, true);
-            let collection = db.collection::<Self>(collection_name);
-            match collection.create_index(index_model, None).await {
-                Ok(_) => {
-                    panic!("this is register")
-                }
-                Err(error) => panic!(
-                    "can not create the index because :  {:?} ",
-                    error.to_string()
-                ),
-            }
-        }
+        // for attribute in attributes {
+        //     let db = RSpark::get_db();
+        //     let name = format!("__{}__", &attribute);
+        //     let index_model = create_index_on_model(&attribute, &name, true);
+        //     let collection = db.collection::<Self>(collection_name);
+        //     match collection.create_index(index_model, None).await {
+        //         Ok(_) => {
+        //             panic!("this is register")
+        //         }
+        //         Err(error) => panic!(
+        //             "can not create the index because :  {:?} ",
+        //             error.to_string()
+        //         ),
+        //     }
+        // }
     }
 
     fn get_coll(db: &Database, coll_name: &str) -> Collection<Self> {

@@ -1,8 +1,6 @@
 use async_trait::async_trait;
 use mongodb::bson::to_document;
 use mongodb::Cursor;
-use serde::{Deserialize, Serialize};
-use serde::de::DeserializeOwned;
 
 use crate::error::RSparkError;
 use crate::model::base_model::BaseModel;
@@ -30,13 +28,7 @@ where
 {
     async fn save(&mut self) -> &Self {
         if self.is_filled() {
-            let doc = convert_to_doc(&self.inner);
-            let result = match doc {
-                Ok(doc) => {
-                    T::save(doc , self.db , self.collection_name).await
-                },
-                Err(error) => Err(error)
-            };
+            let result = T::save(&*self.inner , self.db , self.collection_name ).await;
             match result {
                 Ok(inner_result) => {
                     let object_id = inner_result.inserted_id.as_object_id();
@@ -51,6 +43,19 @@ where
         self
     }
     async fn update(&mut self) -> &Self {
+        let converted = convert_to_doc(&self.inner);
+        match self._id {
+            Some(id) => {
+               let result =  match converted {
+                    Ok(doc) => T::update(&id , doc , self.db , self.collection_name).await,
+                    Err(error) => Err(error)
+                };
+                if let Err(error) = result{
+                    self.__set_error(error);
+                }
+            },
+            None => self.__set_error(RSparkError::new("Can not update without object id "))
+        }
         self
     }
     async fn find_one(&mut self, prototype: Prototype<T>) -> &Self {
@@ -74,7 +79,7 @@ where
         return match prototype {
             Doc(doc) => T::find(doc, self.db, self.collection_name).await,
             Model(model) => {
-                let converted = to_document(&model);
+                let converted = convert_to_doc(&model);
                 match converted {
                     Ok(doc) => T::find(doc, self.db, self.collection_name).await,
                     Err(error) => Err(RSparkError::new(&error.to_string())),
@@ -84,10 +89,10 @@ where
     }
     async fn find_with_callback<F: Fn(T)>(&self, prototype: Prototype<T>, call_back: F) {
         match prototype {
-            Prototype::Doc(doc) => {
+            Doc(doc) => {
                 T::find_with_callback(doc, call_back, self.db, self.collection_name).await
             }
-            Prototype::Model(model) => {
+            Model(model) => {
                 let converted = to_document(&model);
                 if let Ok(doc) = converted {
                     T::find_with_callback(doc, call_back, self.db, self.collection_name).await
