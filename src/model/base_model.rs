@@ -6,7 +6,7 @@ use std::ops::{Deref, DerefMut};
 
 #[derive(Debug)]
 pub struct BaseModel<'a, T> {
-    pub(crate) id: Option<ObjectId>,
+    pub(crate) _id: Option<ObjectId>,
     pub(crate) inner: Box<T>,
     pub(crate) inner_state: InnerState,
     pub(crate) db: &'a Database,
@@ -32,7 +32,7 @@ impl<'a, T> BaseModel<'a, T> {
         self.last_error = Some(error);
     }
     pub(crate) fn __set_object_id(&mut self, ob_id: Option<ObjectId>) {
-        self.id = ob_id;
+        self._id = ob_id;
     }
     pub fn is_filled(&self) -> bool {
         return match self.inner_state {
@@ -40,13 +40,13 @@ impl<'a, T> BaseModel<'a, T> {
             InnerState::Default => false,
         };
     }
-    pub fn set_inner_state(&mut self, new_state: InnerState) {
+    pub fn set_inner_state(&mut self, new_state: InnerState) -> &Self {
         self.inner_state = new_state;
+        self
     }
     pub fn get_inner_state(&self) -> &InnerState {
         &self.inner_state
     }
-
     pub fn get_last_error(&self) -> Option<&RSparkError>{
         self.last_error.as_ref()
     }
@@ -56,6 +56,7 @@ impl<'a, T> BaseModel<'a, T> {
             None => false
         }
     }
+
 }
 
 impl<'a, T: Default> BaseModel<'a, T> {
@@ -64,7 +65,7 @@ impl<'a, T: Default> BaseModel<'a, T> {
             db,
             inner: Box::new(T::default()),
             inner_state: InnerState::Default,
-            id: None,
+            _id: None,
             collection_name: coll_name,
             last_error: None,
         }
