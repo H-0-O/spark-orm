@@ -12,14 +12,8 @@ RSpark is an open-source, fast, and memory-efficient Object-Relational Mapping (
 
 ## Getting Started
 
-1. Add RSpark as a dependency in your `Cargo.toml` file:
 
-    ```toml
-    [dependencies]
-    rspark = "0.1.0"
-    ```
-
-2. Derive the `Model` trait for your structs and customize collection names using `#[coll_name]`:
+1. Derive the `Model` trait for your structs and customize collection names using `#[coll_name]`:
 
     ```rust
     #[derive(Model)]
@@ -29,7 +23,7 @@ RSpark is an open-source, fast, and memory-efficient Object-Relational Mapping (
     }
     ```
 
-3. Connect to MongoDB and start using the ORM:
+2. Connect to MongoDB and start using the ORM:
 
     ```rust
     use rspark::{RSpark, Model};
