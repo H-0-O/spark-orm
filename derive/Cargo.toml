@@ -4,6 +4,7 @@ name = "rspark-derive"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
+description = "Macros for rspark"
 repository = "https://github.com/RSaprk/ORM.git"
 [lib]
 proc-macro = true
