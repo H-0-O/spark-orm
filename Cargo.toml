@@ -2,7 +2,8 @@
 name = "rspark"
 version = "0.1.0"
 edition = "2021"
-description = "RSpark is an open-source, fast, and memory-efficient Object-Relational Mapping (ORM) library for MongoDB written in Rust. It allows seamless integration between Rust structs and MongoDB collections by automatically converting structs to models. "
+description = "Mongodb ORM in Rust"
+keywords = ["ORM" , "mongodb"]
 repository = "https://github.com/RSaprk/ORM.git"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,7 +13,7 @@ futures = "0.3.29"
 mongodb = "2.7.1"
 once_cell = "1.18.0"
 quote = "1.0.33"
-rspark-derive = {version = "0.1.0" , path = "derive"}
+rspark-derive = {version = "0.1.0" , path = "./derive"}
 serde = { version = "1.0.192", features = ["derive"] }
 tokio = { version = "1.34.0" , features = ["rt" , "macros"] }
 [dev-dependencies]
@@ -21,3 +22,4 @@ tokio = { version = "1.34.0" , features = ["rt" , "macros"] }
 members = [
     "derive",
 ]
+
