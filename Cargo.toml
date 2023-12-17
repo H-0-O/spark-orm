@@ -2,7 +2,8 @@
 name = "rspark"
 version = "0.1.0"
 edition = "2021"
-
+description = "RSpark is an open-source, fast, and memory-efficient Object-Relational Mapping (ORM) library for MongoDB written in Rust. It allows seamless integration between Rust structs and MongoDB collections by automatically converting structs to models. "
+repository = "https://github.com/RSaprk/ORM.git"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
