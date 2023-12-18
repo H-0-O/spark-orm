@@ -1,4 +1,4 @@
-use crate::error::RSparkError;
+use crate::error::RmORMError;
 use crate::model::InnerState;
 use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
@@ -11,7 +11,7 @@ pub struct BaseModel<'a, T> {
     pub(crate) inner_state: InnerState,
     pub(crate) db: &'a Database,
     pub(crate) collection_name: &'a str,
-    pub(crate) last_error: Option<RSparkError>,
+    pub(crate) last_error: Option<RmORMError>,
 }
 
 impl<'a, T: 'a> Deref for BaseModel<'a, T> {
@@ -28,7 +28,7 @@ impl<'a, T: 'a> DerefMut for BaseModel<'a, T> {
     }
 }
 impl<'a, T> BaseModel<'a, T> {
-    pub(crate) fn __set_error(&mut self, error: RSparkError) {
+    pub(crate) fn __set_error(&mut self, error: RmORMError) {
         self.last_error = Some(error);
     }
     pub(crate) fn __set_object_id(&mut self, ob_id: Option<ObjectId>) {
@@ -47,7 +47,7 @@ impl<'a, T> BaseModel<'a, T> {
     pub fn get_inner_state(&self) -> &InnerState {
         &self.inner_state
     }
-    pub fn get_last_error(&self) -> Option<&RSparkError>{
+    pub fn get_last_error(&self) -> Option<&RmORMError>{
         self.last_error.as_ref()
     }
     pub fn has_error(&self) -> bool{

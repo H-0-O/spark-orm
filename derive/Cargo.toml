@@ -1,6 +1,6 @@
 [package]
 authors = ["H_O_O"]
-name = "rspark-derive"
+name = "rm_orm_derive"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"

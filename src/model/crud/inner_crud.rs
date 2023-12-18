@@ -10,8 +10,8 @@ use mongodb::{Collection, Cursor, Database};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use crate::error::RSparkError;
-use crate::r_spark::{RSpark, RSparkResult};
+use crate::error::RmORMError;
+use crate::rm_orm::{RmORM, RSparkResult};
 
 
 #[async_trait(?Send)]
@@ -29,7 +29,7 @@ where
     async fn save(inner: &Self, db: &Database, coll_name: &str) -> RSparkResult<InsertOneResult> {
         let collection = Self::get_coll(db, coll_name);
         let re = collection.insert_one(inner, None).await;
-        RSpark::from_mongo_result(re)
+        RmORM::from_mongo_result(re)
     }
 
     async fn update(
@@ -50,7 +50,7 @@ where
             .await;
         match result {
             Ok(inner_result) => Ok(inner_result.modified_count),
-            Err(error) => Err(RSparkError::new(&error.to_string())),
+            Err(error) => Err(RmORMError::new(&error.to_string())),
         }
     }
     async fn find(
@@ -60,7 +60,7 @@ where
     ) -> RSparkResult<Cursor<Self>> {
         let coll = Self::get_coll(db, coll_name);
         let result = coll.find(prototype, None).await;
-        RSpark::from_mongo_result(result)
+        RmORM::from_mongo_result(result)
     }
     async fn find_with_callback<F: Fn(Self)>(
         prototype: Document,
@@ -83,7 +83,7 @@ where
         coll_name: &str,
     ) -> RSparkResult<Option<Self>> {
         let coll = Self::get_coll(db, coll_name);
-        RSpark::from_mongo_result(coll.find_one(prototype, None).await)
+        RmORM::from_mongo_result(coll.find_one(prototype, None).await)
     }
     async fn process_attributes(attributes: Vec<String>, collection_name: &str) {
         todo!();

@@ -1,8 +1,8 @@
 use mongodb::Client;
 use mongodb::options::ClientOptions;
 
-use crate::error::RSparkError;
-use crate::r_spark::RSparkResult;
+use crate::error::RmORMError;
+use crate::rm_orm::RSparkResult;
 
 pub async fn create_client_options(
     user_name: &str,
@@ -14,7 +14,7 @@ pub async fn create_client_options(
     let client_options = ClientOptions::parse(connection_string).await;
     match client_options {
         Ok(otp) => Ok(otp),
-        Err(err) => Err(RSparkError::new(&err.to_string())),
+        Err(err) => Err(RmORMError::new(&err.to_string())),
     }
 }
 

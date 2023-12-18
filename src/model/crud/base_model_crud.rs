@@ -2,13 +2,13 @@ use async_trait::async_trait;
 use mongodb::bson::to_document;
 use mongodb::Cursor;
 
-use crate::error::RSparkError;
+use crate::error::RmORMError;
 use crate::model::base_model::BaseModel;
 use crate::model::crud::inner_crud::InnerCRUD;
 use crate::model::Prototype::{Doc, Model};
 use crate::model::Prototype;
 use crate::model::utility::inner_utility::InnerUtility;
-use crate::r_spark::RSparkResult;
+use crate::rm_orm::RSparkResult;
 use crate::utilities::convert_to_doc;
 
 #[async_trait(?Send)]
@@ -54,7 +54,7 @@ where
                     self.__set_error(error);
                 }
             },
-            None => self.__set_error(RSparkError::new("Can not update without object id "))
+            None => self.__set_error(RmORMError::new("Can not update without object id "))
         }
         self
     }
@@ -82,7 +82,7 @@ where
                 let converted = convert_to_doc(&model);
                 match converted {
                     Ok(doc) => T::find(doc, self.db, self.collection_name).await,
-                    Err(error) => Err(RSparkError::new(&error.to_string())),
+                    Err(error) => Err(RmORMError::new(&error.to_string())),
                 }
             }
         };

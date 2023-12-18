@@ -3,7 +3,7 @@ use mongodb::bson::{Document, to_document};
 use serde::Serialize;
 
 
-use crate::error::RSparkError;
+use crate::error::RmORMError;
 use crate::RSparkResult;
 
 pub fn create_index_on_model(field_name: &str, name: &str, unique: bool) -> IndexModel {
@@ -28,7 +28,7 @@ pub(crate) fn convert_to_doc<T:Serialize>(model: T) -> RSparkResult<Document> {
         },
         Err(error) => {
             Err(
-                RSparkError::new(&error.to_string())
+                RmORMError::new(&error.to_string())
             )
         }
     };

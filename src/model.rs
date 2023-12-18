@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 
-use std::ops::{Deref, DerefMut};
+
 use mongodb::bson::Document;
 
 pub mod base_model;

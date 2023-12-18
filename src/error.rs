@@ -1,11 +1,11 @@
 #[derive(Debug)]
-pub struct RSparkError {
+pub struct RmORMError {
     message: String,
 }
 
-impl RSparkError {
-    pub fn new(message: &str) -> RSparkError {
-        RSparkError {
+impl RmORMError {
+    pub fn new(message: &str) -> RmORMError {
+        RmORMError {
             message: message.to_string(),
         }
     }

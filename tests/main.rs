@@ -3,10 +3,9 @@ use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
 use serde::{Deserialize, Serialize};
-
-use rspark::model::InnerState;
-use rspark::{model::Prototype, RSpark};
-use rspark_derive::Model;
+use rm_orm::model::InnerState;
+use rm_orm::{model::Prototype, RSpark};
+use rm_orm::Model;
 #[derive(Model, Serialize, Deserialize, Debug, Default)]
 #[coll_name = "Books"]
 pub struct Book {

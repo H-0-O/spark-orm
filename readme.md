@@ -1,6 +1,6 @@
-# RSpark MongoDB ORM for Rust
+# rm_orm: MongoDB ORM for Rust
 
-RSpark is an open-source, fast, and memory-efficient Object-Relational Mapping (ORM) library for MongoDB written in Rust. It allows seamless integration between Rust structs and MongoDB collections by automatically converting structs to models.
+rm_orm is an open-source, fast, and memory-efficient Object-Relational Mapping (ORM) library for MongoDB written in Rust. It allows seamless integration between Rust structs and MongoDB collections by automatically converting structs to models.
 
 ## Features
 
@@ -8,10 +8,9 @@ RSpark is an open-source, fast, and memory-efficient Object-Relational Mapping (
 
 - **Collection Name Customization**: Set the collection name for your models using the `#[coll_name]` attribute.
 
-- **Non-Heap Copy**: RSpark is designed for efficiency, providing a non-heap copy ORM solution for MongoDB.
+- **Non-Heap Copy**: rm_orm is designed for efficiency, providing a non-heap copy ORM solution for MongoDB.
 
 ## Getting Started
-
 
 1. Derive the `Model` trait for your structs and customize collection names using `#[coll_name]`:
 
@@ -26,12 +25,12 @@ RSpark is an open-source, fast, and memory-efficient Object-Relational Mapping (
 2. Connect to MongoDB and start using the ORM:
 
     ```rust
-    use rspark::{RSpark, Model};
+    use rm_orm::{RmORM, Model};
 
     #[tokio::main]
     async fn main() {
         // Connect to MongoDB
-        let db = RSpark::connect("admin", "123", "localhost", "27019", "main_db").await;
+        let db = RmORM::connect("admin", "123", "localhost", "27019", "main_db").await;
 
         // Create a new Book instance
         let mut the_book = Book::new(&db).await;
@@ -41,4 +40,4 @@ RSpark is an open-source, fast, and memory-efficient Object-Relational Mapping (
         the_book.save().await.unwrap();
     }
     ```
-
+Feel free to use this updated version with the new name "rm_orm" throughout the documentation.

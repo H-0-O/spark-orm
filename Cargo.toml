@@ -1,5 +1,5 @@
 [package]
-name = "rspark"
+name = "rm_orm"
 authors = ["H_O_O"]
 version = "0.1.0"
 edition = "2021"
@@ -15,7 +15,7 @@ futures = "0.3.29"
 mongodb = "2.7.1"
 once_cell = "1.18.0"
 quote = "1.0.33"
-rspark-derive.workspace = true
+rm_orm_derive.workspace = true
 serde = { version = "1.0.192", features = ["derive"] }
 tokio = { version = "1.34.0" , features = ["rt" , "macros"] }
 [dev-dependencies]
@@ -26,4 +26,4 @@ members = [
     "derive",
 ]
 [workspace.dependencies]
-rspark-derive = {path = "derive", version = "0.1.0"}
+rm_orm_derive = {path = "derive", version = "0.1.0"}

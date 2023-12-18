@@ -4,18 +4,18 @@ use mongodb::{Client, Database};
 use once_cell::sync::OnceCell;
 
 use crate::connection::{create_client, create_client_options};
-use crate::error::RSparkError;
+use crate::error::RmORMError;
 
-pub type RSparkResult<T> = std::result::Result<T, RSparkError>;
-pub(crate) static R_SPARK_STATIC: OnceCell<RSpark> = OnceCell::new();
+pub type RSparkResult<T> = std::result::Result<T, RmORMError>;
+pub(crate) static R_SPARK_STATIC: OnceCell<RmORM> = OnceCell::new();
 
 #[derive(Debug)]
-pub struct RSpark {
+pub struct RmORM {
     client: Client,
     db: Arc<Database>,
 }
 
-impl RSpark {
+impl RmORM {
     pub async fn global_connect(
         user_name: &str,
         password: &str,
@@ -32,7 +32,7 @@ impl RSpark {
         //     .run_command(doc! {"ping": 1}, None)
         //     .await?;
         let db = client.database(db_name);
-        let rs = RSpark {
+        let rs = RmORM {
             client,
             db: Arc::new(db),
         };
@@ -63,10 +63,10 @@ impl RSpark {
 
     pub fn from_mongo_result<T>(
         re: mongodb::error::Result<T>,
-    ) -> crate::r_spark::RSparkResult<T> {
+    ) -> crate::rm_orm::RSparkResult<T> {
         match re {
             Ok(inner_re) => Ok(inner_re),
-            Err(error) => Err(RSparkError::new(&error.to_string())),
+            Err(error) => Err(RmORMError::new(&error.to_string())),
         }
     }
 }
