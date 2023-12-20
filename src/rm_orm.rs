@@ -6,8 +6,8 @@ use once_cell::sync::OnceCell;
 use crate::connection::{create_client, create_client_options};
 use crate::error::RmORMError;
 
-pub type RSparkResult<T> = std::result::Result<T, RmORMError>;
-pub(crate) static R_SPARK_STATIC: OnceCell<RmORM> = OnceCell::new();
+pub type RmORMResult<T> = std::result::Result<T, RmORMError>;
+pub(crate) static R_M_ORM_STATIC: OnceCell<RmORM> = OnceCell::new();
 
 #[derive(Debug)]
 pub struct RmORM {
@@ -36,7 +36,7 @@ impl RmORM {
             client,
             db: Arc::new(db),
         };
-        R_SPARK_STATIC.set(rs).unwrap();
+        R_M_ORM_STATIC.set(rs).unwrap();
         Self::get_db()
     }
 
@@ -54,7 +54,7 @@ impl RmORM {
         client.database(db_name)
     }
     pub fn get_db() -> Arc<Database> {
-        let r_spark = R_SPARK_STATIC.get();
+        let r_spark = R_M_ORM_STATIC.get();
         match r_spark {
             Some(rs) => Arc::clone(&rs.db),
             None => panic!("The Data base not set !!!"),
@@ -63,7 +63,7 @@ impl RmORM {
 
     pub fn from_mongo_result<T>(
         re: mongodb::error::Result<T>,
-    ) -> crate::rm_orm::RSparkResult<T> {
+    ) -> crate::rm_orm::RmORMResult<T> {
         match re {
             Ok(inner_re) => Ok(inner_re),
             Err(error) => Err(RmORMError::new(&error.to_string())),

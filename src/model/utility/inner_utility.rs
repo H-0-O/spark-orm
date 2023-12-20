@@ -1,4 +1,4 @@
-use crate::model::base_model::BaseModel;
+use crate::model::proxy_model::ProxyModel;
 use crate::model::InnerState;
 
 pub trait InnerUtility<T> {
@@ -17,7 +17,7 @@ pub trait InnerUtility<T> {
         T: Default;
 }
 
-impl<'a, T> InnerUtility<T> for BaseModel<'a, T> {
+impl<'a, T> InnerUtility<T> for ProxyModel<'a, T> {
     fn fill(&mut self, inner: T) {
         *self.inner = inner;
     }

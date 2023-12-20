@@ -4,7 +4,7 @@
 
 use mongodb::bson::Document;
 
-pub mod base_model;
+pub mod proxy_model;
 pub mod crud;
 pub mod utility;
 #[derive(Debug)]

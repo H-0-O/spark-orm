@@ -11,7 +11,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::error::RmORMError;
-use crate::rm_orm::{RmORM, RSparkResult};
+use crate::rm_orm::{RmORM, RmORMResult};
 
 
 #[async_trait(?Send)]
@@ -26,7 +26,7 @@ where
     Self: Send,
     Self: Debug,
 {
-    async fn save(inner: &Self, db: &Database, coll_name: &str) -> RSparkResult<InsertOneResult> {
+    async fn save(inner: &Self, db: &Database, coll_name: &str) -> RmORMResult<InsertOneResult> {
         let collection = Self::get_coll(db, coll_name);
         let re = collection.insert_one(inner, None).await;
         RmORM::from_mongo_result(re)
@@ -37,7 +37,7 @@ where
         inner: Document,
         db: &Database,
         coll_name: &str,
-    ) -> RSparkResult<u64> {
+    ) -> RmORMResult<u64> {
         let coll = Self::get_coll(db, coll_name);
         let result = coll
             .update_one(
@@ -57,7 +57,7 @@ where
         prototype: Document,
         db: &Database,
         coll_name: &str,
-    ) -> RSparkResult<Cursor<Self>> {
+    ) -> RmORMResult<Cursor<Self>> {
         let coll = Self::get_coll(db, coll_name);
         let result = coll.find(prototype, None).await;
         RmORM::from_mongo_result(result)
@@ -81,7 +81,7 @@ where
         prototype: Document,
         db: &Database,
         coll_name: &str,
-    ) -> RSparkResult<Option<Self>> {
+    ) -> RmORMResult<Option<Self>> {
         let coll = Self::get_coll(db, coll_name);
         RmORM::from_mongo_result(coll.find_one(prototype, None).await)
     }

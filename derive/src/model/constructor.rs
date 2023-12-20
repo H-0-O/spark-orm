@@ -3,7 +3,7 @@ use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::spanned::Spanned;
 use syn::{Field, FieldsNamed};
 
-use crate::model::{__struct, BASE_MODEL_STRUCT_NAME};
+use crate::model::{__struct, PROXY_MODEL_STRUCT_NAME};
 
 impl __struct {
     /// Generates the constructor function for the custom model.
@@ -28,7 +28,7 @@ impl __struct {
     /// }
     pub(in crate::model) fn generate_constructor(&self, fields_named: &FieldsNamed) -> TokenStream {
         let st_model = self.generate_base_model_instance();
-        let base_model_name = self.get_base_model_ident();
+        let base_model_name = self.get_proxy_model_ident();
         quote! {
                 async fn new<'a>(db: &'a Database) -> #base_model_name<'a , Self> 
             {
@@ -37,14 +37,14 @@ impl __struct {
         }
     }
     fn generate_base_model_instance(&self) -> TokenStream {
-        let name = self.get_base_model_ident();
+        let name = self.get_proxy_model_ident();
         let collection_name = self.get_collection_name();
         quote! {
              #name::new(db , #collection_name )
         }
     }
 
-    fn get_base_model_ident(&self) -> Ident {
-        format_ident!("{}", BASE_MODEL_STRUCT_NAME)
+    fn get_proxy_model_ident(&self) -> Ident {
+        format_ident!("{}", PROXY_MODEL_STRUCT_NAME)
     }
 }

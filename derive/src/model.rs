@@ -14,7 +14,7 @@ mod inner;
 const MODEL_ATTRIBUTE_NAME: &'static str = "model";
 const INNER_CRUD_TRAIT_NAME: &'static str = "InnerCRUD";
 
-const BASE_MODEL_STRUCT_NAME: &'static str = "BaseModel";
+const PROXY_MODEL_STRUCT_NAME: &'static str = "ProxyModel";
 /// This generate a custom model for each one struct that becomes to a model
 /// generate the trait Model{struct name} ex( ModelUser ) and create the constructor and relations for it
 pub struct __struct(DeriveInput);

@@ -3,9 +3,9 @@ use crate::model::InnerState;
 use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
 use std::ops::{Deref, DerefMut};
-
+pub mod crud;
 #[derive(Debug)]
-pub struct BaseModel<'a, T> {
+pub struct ProxyModel<'a, T> {
     pub(crate) _id: Option<ObjectId>,
     pub(crate) inner: Box<T>,
     pub(crate) inner_state: InnerState,
@@ -14,7 +14,7 @@ pub struct BaseModel<'a, T> {
     pub(crate) last_error: Option<RmORMError>,
 }
 
-impl<'a, T: 'a> Deref for BaseModel<'a, T> {
+impl<'a, T: 'a> Deref for ProxyModel<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -22,12 +22,12 @@ impl<'a, T: 'a> Deref for BaseModel<'a, T> {
     }
 }
 
-impl<'a, T: 'a> DerefMut for BaseModel<'a, T> {
+impl<'a, T: 'a> DerefMut for ProxyModel<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.inner.as_mut()
     }
 }
-impl<'a, T> BaseModel<'a, T> {
+impl<'a, T> ProxyModel<'a, T> {
     pub(crate) fn __set_error(&mut self, error: RmORMError) {
         self.last_error = Some(error);
     }
@@ -59,9 +59,9 @@ impl<'a, T> BaseModel<'a, T> {
 
 }
 
-impl<'a, T: Default> BaseModel<'a, T> {
-    pub fn new(db: &'a Database, coll_name: &'a str) -> BaseModel<'a, T> {
-        BaseModel {
+impl<'a, T: Default> ProxyModel<'a, T> {
+    pub fn new(db: &'a Database, coll_name: &'a str) -> ProxyModel<'a, T> {
+        ProxyModel {
             db,
             inner: Box::new(T::default()),
             inner_state: InnerState::Default,

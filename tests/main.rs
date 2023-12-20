@@ -4,8 +4,9 @@ use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
 use serde::{Deserialize, Serialize};
 use rm_orm::model::InnerState;
-use rm_orm::{model::Prototype, RSpark};
+use rm_orm::{model::Prototype};
 use rm_orm::Model;
+use rm_orm::preload::*;
 #[derive(Model, Serialize, Deserialize, Debug, Default)]
 #[coll_name = "Books"]
 pub struct Book {
@@ -15,6 +16,12 @@ pub struct Book {
     name: String,
     other_info: OtherInfo,
     some: u8,
+}
+
+#[derive(Model , Serialize , Deserialize , Debug , Default)]
+#[coll_name = "Authors"]
+pub struct Author{
+    _id: Option<ObjectId>
 }
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct OtherInfo {
@@ -119,5 +126,5 @@ fn get_test_book() -> Book {
 }
 
 async fn get_test_db() -> Database {
-    RSpark::connect("admin", "123", "localhost", "27019", "main_db").await
+    RmORM::connect("admin", "123", "localhost", "27019", "main_db").await
 }

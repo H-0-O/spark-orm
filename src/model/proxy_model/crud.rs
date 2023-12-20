@@ -3,25 +3,25 @@ use mongodb::bson::to_document;
 use mongodb::Cursor;
 
 use crate::error::RmORMError;
-use crate::model::base_model::BaseModel;
+use crate::model::proxy_model::ProxyModel;
 use crate::model::crud::inner_crud::InnerCRUD;
 use crate::model::Prototype::{Doc, Model};
 use crate::model::Prototype;
 use crate::model::utility::inner_utility::InnerUtility;
-use crate::rm_orm::RSparkResult;
+use crate::rm_orm::RmORMResult;
 use crate::utilities::convert_to_doc;
 
 #[async_trait(?Send)]
-pub trait BaseModelCrud<T> {
+pub trait ProxyModelCrud<T> {
     async fn save(&mut self) -> &Self;
     async fn update(&mut self) -> &Self;
     async fn find_one(&mut self, prototype: Prototype<T>) -> &Self;
-    async fn find(&self, prototype: Prototype<T>) -> RSparkResult<Cursor<T>>;
+    async fn find(&self, prototype: Prototype<T>) -> RmORMResult<Cursor<T>>;
     async fn find_with_callback<F: Fn(T)>(&self, prototype: Prototype<T>, call_back: F);
 }
 
 #[async_trait(?Send)]
-impl<'a, T> BaseModelCrud<T> for BaseModel<'a, T>
+impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
 where
     T: InnerCRUD,
     T: Default,
@@ -75,7 +75,7 @@ where
         }
         self
     }
-    async fn find(&self, prototype: Prototype<T>) -> RSparkResult<Cursor<T>> {
+    async fn find(&self, prototype: Prototype<T>) -> RmORMResult<Cursor<T>> {
         return match prototype {
             Doc(doc) => T::find(doc, self.db, self.collection_name).await,
             Model(model) => {
