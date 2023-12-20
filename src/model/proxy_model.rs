@@ -4,7 +4,12 @@ use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
 use std::ops::{Deref, DerefMut};
 pub mod crud;
-#[derive(Debug)]
+
+/// A proxy that facilitates interactions between developers and a model.
+///
+/// This `ProxyModel` struct serves as an intermediary layer, managing various operations
+/// between the developer and the underlying model implementation. It encapsulates the
+/// model's core functionality, allowing for additional features, error handling, and ...
 pub struct ProxyModel<'a, T> {
     pub(crate) _id: Option<ObjectId>,
     pub(crate) inner: Box<T>,
@@ -14,6 +19,13 @@ pub struct ProxyModel<'a, T> {
     pub(crate) last_error: Option<RmORMError>,
 }
 
+
+/// Implements the `Deref` trait for the `ProxyModel` struct, allowing direct access to the
+/// underlying model without the need for the dereference operator (*).
+/// The `Deref` trait in Rust enables instances of `ProxyModel` to be treated as if they were
+/// instances of the inner model (`T`). This means that developers can access methods and
+/// properties of the inner model directly on a `ProxyModel` instance, enhancing code clarity
+/// and reducing the need for explicit dereferencing with the `*` operator.
 impl<'a, T: 'a> Deref for ProxyModel<'a, T> {
     type Target = T;
 
@@ -58,6 +70,7 @@ impl<'a, T> ProxyModel<'a, T> {
     }
 
 }
+
 
 impl<'a, T: Default> ProxyModel<'a, T> {
     pub fn new(db: &'a Database, coll_name: &'a str) -> ProxyModel<'a, T> {
