@@ -3,6 +3,10 @@ use crate::model::InnerState;
 use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
 use std::ops::{Deref, DerefMut};
+use serde::Serialize;
+use crate::rm_orm::RmORMResult;
+use crate::utilities::convert_to_doc;
+
 pub mod crud;
 
 /// A proxy that facilitates interactions between developers and a model.
@@ -45,6 +49,24 @@ impl<'a, T> ProxyModel<'a, T> {
     }
     pub(crate) fn __set_object_id(&mut self, ob_id: Option<ObjectId>) {
         self._id = ob_id;
+    }
+    pub(crate) fn __get_id_from_non_doc<M: Serialize>(&self , data: &M) -> RmORMResult<Option<ObjectId>> {
+        let converted = convert_to_doc(data);
+
+        match converted {
+            Ok(doc) => {
+                let id = doc.get("_id");
+                if let Some(bson_id) = id{
+                   return  Ok(bson_id.as_object_id())
+                }
+                Err(
+                    RmORMError::new("")
+                )
+            } ,
+            Err(error) =>{
+                Err(error)
+            }
+        }
     }
     pub fn is_filled(&self) -> bool {
         return match self.inner_state {

@@ -6,7 +6,7 @@ use crate::error::RmORMError;
 use crate::model::proxy_model::ProxyModel;
 use crate::model::crud::inner_crud::InnerCRUD;
 use crate::model::Prototype::{Doc, Model};
-use crate::model::Prototype;
+use crate::model::{InnerState, Prototype};
 use crate::model::utility::inner_utility::InnerUtility;
 use crate::rm_orm::RmORMResult;
 use crate::utilities::convert_to_doc;
@@ -70,7 +70,23 @@ where
             }
         };
         match result {
-            Ok(inner) => self.set_or_default(inner),
+            Ok(inner) => {
+                if let Some(data) = inner {
+                    let id = self.__get_id_from_non_doc(&data);
+                    match id {
+                        Ok(inner_id) => {
+                            self.__set_object_id(inner_id);
+                        },
+                        Err(error) => {
+                            self.__set_error(error);
+                        }
+                    }
+                    self.fill(data);
+                    self.inner_state = InnerState::Filled;
+                }else{
+                    self.restore_to_default();
+                }
+            },
             Err(error) => self.__set_error(error),
         }
         self

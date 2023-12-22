@@ -63,7 +63,7 @@ impl RmORM {
 
     pub fn from_mongo_result<T>(
         re: mongodb::error::Result<T>,
-    ) -> crate::rm_orm::RmORMResult<T> {
+    ) -> RmORMResult<T> {
         match re {
             Ok(inner_re) => Ok(inner_re),
             Err(error) => Err(RmORMError::new(&error.to_string())),
