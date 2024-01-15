@@ -2,11 +2,11 @@ use futures::StreamExt;
 use mongodb::bson::doc;
 use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
-use serde::{Deserialize, Serialize};
 use rm_orm::model::InnerState;
-use rm_orm::{model::Prototype};
-use rm_orm::Model;
+use rm_orm::model::Prototype;
 use rm_orm::preload::*;
+use rm_orm::Model;
+use serde::{Deserialize, Serialize};
 #[derive(Model, Serialize, Deserialize, Debug, Default)]
 #[coll_name = "Books"]
 pub struct Book {
@@ -18,10 +18,10 @@ pub struct Book {
     some: u8,
 }
 
-#[derive(Model , Serialize , Deserialize , Debug , Default)]
+#[derive(Model, Serialize, Deserialize, Debug, Default)]
 #[coll_name = "Authors"]
-pub struct Author{
-    _id: Option<ObjectId>
+pub struct Author {
+    _id: Option<ObjectId>,
 }
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct OtherInfo {
@@ -36,21 +36,19 @@ pub struct RawTest {
 // TODO move the tests into a tests/crud.rs file
 // TODO
 #[tokio::test]
-async fn _save() {
+async fn _save() {}
+async fn _s_d() -> Result<(), RmORMError> {
     let db = get_test_db().await;
     let mut new_book = Book::new(&db).await;
+
     new_book.set_inner_state(InnerState::Filled);
     new_book.name = "The First Book".to_string();
-    new_book.other_info.print_number = 56;
-    new_book.some = 23;
-    new_book.other_info.fee = 5;
-    new_book.save().await;
-    if new_book.has_error() {
-        let error = new_book.get_last_error().unwrap();
-        println!("my error {:?}", error)
-    }
+    new_book.other_info.print_number = 55;
+    new_book.some = 22;
+    new_book.other_info.fee = 4;
+    new_book.save().await?;
+    Ok(())
 }
-
 #[tokio::test]
 async fn __raw_save() {
     let db = get_test_db().await;

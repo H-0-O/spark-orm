@@ -13,7 +13,6 @@ use serde::Serialize;
 use crate::error::RmORMError;
 use crate::rm_orm::{RmORM, RmORMResult};
 
-
 #[async_trait(?Send)]
 pub trait InnerCRUD
 where

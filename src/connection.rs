@@ -1,5 +1,5 @@
-use mongodb::Client;
 use mongodb::options::ClientOptions;
+use mongodb::Client;
 
 use crate::error::RmORMError;
 use crate::rm_orm::RmORMResult;
