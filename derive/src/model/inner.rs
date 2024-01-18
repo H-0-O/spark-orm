@@ -1,11 +1,11 @@
+use crate::model::__struct;
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
-use syn::{Field, FieldsNamed};
 use syn::spanned::Spanned;
-use crate::model::__struct;
+use syn::{Field, FieldsNamed};
 
 pub(crate) trait filler {
-    fn generate_fill_method(&self) ->TokenStream;
+    fn generate_fill_method(&self) -> TokenStream;
 
     /// Generates the function parameters for the constructor.
     ///
@@ -18,7 +18,7 @@ pub(crate) trait filler {
     /// # Returns
     ///
     /// A `TokenStream` representing the function parameters
-    fn generate_filler_parameters(&self , fields_named: &FieldsNamed) ->TokenStream;
+    fn generate_filler_parameters(&self, fields_named: &FieldsNamed) -> TokenStream;
 
     /// Generates the instance fields for the constructor body.
     ///
@@ -31,20 +31,21 @@ pub(crate) trait filler {
     /// # Returns
     ///
     /// A `TokenStream` representing the struct instance fields.
-    fn generate_struct_instance(&self , fields_named: &FieldsNamed) -> TokenStream;
+    fn generate_struct_instance(&self, fields_named: &FieldsNamed) -> TokenStream;
 }
 impl filler for __struct {
-    fn generate_fill_method (&self) -> TokenStream {
+    fn generate_fill_method(&self) -> TokenStream {
         let fields = Self::extract_struct_fields(&self.0.data);
         let params = self.generate_filler_parameters(fields);
         let struct_instance = self.generate_struct_instance(fields);
-        quote!{
+        quote! {
+            #[allow(clippy::too_many_arguments)]
             fn fill(&self , #params){
                     let instance = Self{#struct_instance};
             }
         }
     }
-    fn generate_filler_parameters(&self , fields_named: &FieldsNamed) -> TokenStream {
+    fn generate_filler_parameters(&self, fields_named: &FieldsNamed) -> TokenStream {
         let mut parameters = quote!();
         fields_named.named.iter().for_each(|field: &Field| {
             let span = field.span();
