@@ -15,4 +15,5 @@ pub mod preload {
     pub use crate::model::proxy_model::crud::ProxyModelCrud;
     pub use crate::model::proxy_model::ProxyModel;
     pub use crate::rm_orm::RmORM;
+    pub use crate::Model;
 }

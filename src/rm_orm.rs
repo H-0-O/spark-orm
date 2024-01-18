@@ -11,6 +11,7 @@ pub(crate) static R_M_ORM_STATIC: OnceCell<RmORM> = OnceCell::new();
 
 #[derive(Debug)]
 pub struct RmORM {
+    #[allow(dead_code)]
     client: Client,
     db: Arc<Database>,
 }
@@ -61,9 +62,7 @@ impl RmORM {
         }
     }
 
-    pub fn from_mongo_result<T>(
-        re: mongodb::error::Result<T>,
-    ) -> RmORMResult<T> {
+    pub fn from_mongo_result<T>(re: mongodb::error::Result<T>) -> RmORMResult<T> {
         match re {
             Ok(inner_re) => Ok(inner_re),
             Err(error) => Err(RmORMError::new(&error.to_string())),

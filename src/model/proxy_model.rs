@@ -1,11 +1,11 @@
 use crate::error::RmORMError;
 use crate::model::InnerState;
-use mongodb::bson::oid::ObjectId;
-use mongodb::Database;
-use std::ops::{Deref, DerefMut};
-use serde::Serialize;
 use crate::rm_orm::RmORMResult;
 use crate::utilities::convert_to_doc;
+use mongodb::bson::oid::ObjectId;
+use mongodb::Database;
+use serde::Serialize;
+use std::ops::{Deref, DerefMut};
 
 pub mod crud;
 
@@ -22,7 +22,6 @@ pub struct ProxyModel<'a, T> {
     pub(crate) collection_name: &'a str,
     pub(crate) last_error: Option<RmORMError>,
 }
-
 
 /// Implements the `Deref` trait for the `ProxyModel` struct, allowing direct access to the
 /// underlying model without the need for the dereference operator (*).
@@ -50,29 +49,28 @@ impl<'a, T> ProxyModel<'a, T> {
     pub(crate) fn __set_object_id(&mut self, ob_id: Option<ObjectId>) {
         self._id = ob_id;
     }
-    pub(crate) fn __get_id_from_non_doc<M: Serialize>(&self , data: &M) -> RmORMResult<Option<ObjectId>> {
+    pub(crate) fn __get_id_from_non_doc<M: Serialize>(
+        &self,
+        data: &M,
+    ) -> RmORMResult<Option<ObjectId>> {
         let converted = convert_to_doc(data);
 
         match converted {
             Ok(doc) => {
                 let id = doc.get("_id");
-                if let Some(bson_id) = id{
-                   return  Ok(bson_id.as_object_id())
+                if let Some(bson_id) = id {
+                    return Ok(bson_id.as_object_id());
                 }
-                Err(
-                    RmORMError::new("")
-                )
-            } ,
-            Err(error) =>{
-                Err(error)
+                Err(RmORMError::new(""))
             }
+            Err(error) => Err(error),
         }
     }
     pub fn is_filled(&self) -> bool {
-        return match self.inner_state {
+        match self.inner_state {
             InnerState::Filled => true,
             InnerState::Default => false,
-        };
+        }
     }
     pub fn set_inner_state(&mut self, new_state: InnerState) -> &Self {
         self.inner_state = new_state;
@@ -81,24 +79,19 @@ impl<'a, T> ProxyModel<'a, T> {
     pub fn get_inner_state(&self) -> &InnerState {
         &self.inner_state
     }
-    pub fn get_last_error(&self) -> Option<&RmORMError>{
+    pub fn get_last_error(&self) -> Option<&RmORMError> {
         self.last_error.as_ref()
     }
-    pub fn has_error(&self) -> bool{
-        return match  self.last_error {
-            Some(_) => true,
-            None => false
-        }
+    pub fn has_error(&self) -> bool {
+        self.last_error.is_some()
     }
-
 }
-
 
 impl<'a, T: Default> ProxyModel<'a, T> {
     pub fn new(db: &'a Database, coll_name: &'a str) -> ProxyModel<'a, T> {
         ProxyModel {
             db,
-            inner: Box::new(T::default()),
+            inner: Box::<T>::default(),
             inner_state: InnerState::Default,
             _id: None,
             collection_name: coll_name,

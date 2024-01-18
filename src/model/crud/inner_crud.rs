@@ -84,6 +84,7 @@ where
         let coll = Self::get_coll(db, coll_name);
         RmORM::from_mongo_result(coll.find_one(prototype, None).await)
     }
+    #[allow(unused_variables)]
     async fn process_attributes(attributes: Vec<String>, collection_name: &str) {
         todo!();
         // for attribute in attributes {

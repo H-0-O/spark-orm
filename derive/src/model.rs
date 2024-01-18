@@ -1,20 +1,20 @@
 use std::fmt::Display;
 
+use crate::model::inner::filler;
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote, TokenStreamExt, ToTokens};
 use quote::__private::ext::RepToTokensExt;
 use quote::spanned::Spanned;
+use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use syn::{Data, DeriveInput, Fields, FieldsNamed};
-use crate::model::inner::filler;
 
 mod attrs;
 mod constructor;
 mod index;
 mod inner;
-const MODEL_ATTRIBUTE_NAME: &'static str = "model";
-const INNER_CRUD_TRAIT_NAME: &'static str = "InnerCRUD";
+const MODEL_ATTRIBUTE_NAME: &str = "model";
+const INNER_CRUD_TRAIT_NAME: &str = "InnerCRUD";
 
-const PROXY_MODEL_STRUCT_NAME: &'static str = "ProxyModel";
+const PROXY_MODEL_STRUCT_NAME: &str = "ProxyModel";
 /// This generate a custom model for each one struct that becomes to a model
 /// generate the trait Model{struct name} ex( ModelUser ) and create the constructor and relations for it
 pub struct __struct(DeriveInput);
