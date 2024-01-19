@@ -1,29 +1,21 @@
-use std::borrow::Borrow;
-use std::fmt::Debug;
-
-use async_trait::async_trait;
 use futures::StreamExt;
-use mongodb::bson::oid::ObjectId;
-use mongodb::bson::{doc, Document};
-use mongodb::results::InsertOneResult;
 use mongodb::{Collection, Cursor, Database};
+use mongodb::bson::{doc, Document};
+use mongodb::bson::oid::ObjectId;
+use mongodb::results::InsertOneResult;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::error::RmORMError;
 use crate::rm_orm::{RmORM, RmORMResult};
 
-#[async_trait(?Send)]
+
+#[allow(async_fn_in_trait)]
 pub trait InnerCRUD
 where
-    Self: Serialize,
-    Self: DeserializeOwned,
-    Self: Borrow<Self>,
     Self: Sized,
-    Self: Unpin,
-    Self: Sync,
-    Self: Send,
-    Self: Debug,
+    Self: Serialize,
+    Self: DeserializeOwned
 {
     async fn save(inner: &Self, db: &Database, coll_name: &str) -> RmORMResult<InsertOneResult> {
         let collection = Self::get_coll(db, coll_name);
@@ -80,9 +72,15 @@ where
         prototype: Document,
         db: &Database,
         coll_name: &str,
-    ) -> RmORMResult<Option<Self>> {
+    ) -> RmORMResult<Option<Self>>
+    where
+        Self: Unpin,
+        Self: Sync,
+        Self: Send
+    {
         let coll = Self::get_coll(db, coll_name);
-        RmORM::from_mongo_result(coll.find_one(prototype, None).await)
+        let re = coll.find_one(prototype , None).await;
+        RmORM::from_mongo_result(re)
     }
     #[allow(unused_variables)]
     async fn process_attributes(attributes: Vec<String>, collection_name: &str) {

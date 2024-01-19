@@ -16,7 +16,7 @@ pub mod crud;
 /// model's core functionality, allowing for additional features, error handling, and ...
 pub struct ProxyModel<'a, T> {
     pub(crate) _id: Option<ObjectId>,
-    pub(crate) inner: Box<T>,
+    pub(crate) inner: T,
     pub(crate) inner_state: InnerState,
     pub(crate) db: &'a Database,
     pub(crate) collection_name: &'a str,
@@ -33,13 +33,13 @@ impl<'a, T: 'a> Deref for ProxyModel<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        self.inner.as_ref()
+        &self.inner
     }
 }
 
 impl<'a, T: 'a> DerefMut for ProxyModel<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.inner.as_mut()
+        &mut self.inner
     }
 }
 impl<'a, T> ProxyModel<'a, T> {
@@ -91,7 +91,7 @@ impl<'a, T: Default> ProxyModel<'a, T> {
     pub fn new(db: &'a Database, coll_name: &'a str) -> ProxyModel<'a, T> {
         ProxyModel {
             db,
-            inner: Box::<T>::default(),
+            inner: T::default(),
             inner_state: InnerState::Default,
             _id: None,
             collection_name: coll_name,

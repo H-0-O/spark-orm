@@ -19,7 +19,7 @@ pub trait InnerUtility<T> {
 
 impl<'a, T> InnerUtility<T> for ProxyModel<'a, T> {
     fn fill(&mut self, inner: T) {
-        *self.inner = inner;
+        self.inner = inner;
     }
     fn init(&mut self)
     where

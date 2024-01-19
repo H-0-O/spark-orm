@@ -1,35 +1,39 @@
-use async_trait::async_trait;
 use mongodb::bson::to_document;
-use mongodb::results::InsertOneResult;
 use mongodb::Cursor;
+use mongodb::results::InsertOneResult;
 
 use crate::error::RmORMError;
+use crate::model::{InnerState, Prototype};
 use crate::model::crud::inner_crud::InnerCRUD;
+use crate::model::Prototype::{Doc, Model};
 use crate::model::proxy_model::ProxyModel;
 use crate::model::utility::inner_utility::InnerUtility;
-use crate::model::Prototype::{Doc, Model};
-use crate::model::{InnerState, Prototype};
 use crate::rm_orm::RmORMResult;
 use crate::utilities::convert_to_doc;
 
-#[async_trait(?Send)]
+#[allow(async_fn_in_trait)]
 pub trait ProxyModelCrud<T> {
     async fn save(&mut self) -> RmORMResult<InsertOneResult>;
     async fn update(&mut self) -> RmORMResult<u64>;
-    async fn find_one(&mut self, prototype: Prototype<T>) -> &Self;
+    async fn find_one(&mut self, prototype: Prototype<T>) -> &Self
+        where
+        T: Send,
+        T: Sync,
+        T: Unpin
+    ;
     async fn find(&self, prototype: Prototype<T>) -> RmORMResult<Cursor<T>>;
     async fn find_with_callback<F: Fn(T)>(&self, prototype: Prototype<T>, call_back: F);
 }
 
-#[async_trait(?Send)]
+
 impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
-where
-    T: InnerCRUD,
-    T: Default,
+    where
+        T: InnerCRUD,
+        T: Default,
 {
     /// insert operation
     async fn save(&mut self) -> RmORMResult<InsertOneResult> {
-        return T::save(&*self.inner, self.db, self.collection_name).await;
+        return T::save(&self.inner, self.db, self.collection_name).await;
     }
     /// update operation
     async fn update(&mut self) -> RmORMResult<u64> {
@@ -39,7 +43,12 @@ where
         }
         Err(RmORMError::new("Can't update document without id"))
     }
-    async fn find_one(&mut self, prototype: Prototype<T>) -> &Self {
+    async fn find_one(&mut self, prototype: Prototype<T>) -> &Self
+        where
+            T: Send,
+            T: Sync,
+            T: Unpin
+    {
         let result = match prototype {
             Doc(doc) => T::find_one(doc, self.db, self.collection_name).await,
             Model(model) => {
