@@ -17,9 +17,9 @@ pub trait ProxyModelCrud<T> {
     async fn update(&mut self) -> RmORMResult<u64>;
     async fn find_one(&mut self, prototype: Prototype<T>) -> &Self
         where
-        T: Send,
-        T: Sync,
-        T: Unpin
+            T: Send,
+            T: Sync,
+            T: Unpin
     ;
     async fn find(&self, prototype: Prototype<T>) -> RmORMResult<Cursor<T>>;
     async fn find_with_callback<F: Fn(T)>(&self, prototype: Prototype<T>, call_back: F);
@@ -33,7 +33,7 @@ impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
 {
     /// insert operation
     async fn save(&mut self) -> RmORMResult<InsertOneResult> {
-        return T::save(&self.inner, self.db, self.collection_name).await;
+        T::save(&self.inner, self.db, self.collection_name).await
     }
     /// update operation
     async fn update(&mut self) -> RmORMResult<u64> {
@@ -82,13 +82,13 @@ impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
         self
     }
     async fn find(&self, prototype: Prototype<T>) -> RmORMResult<Cursor<T>> {
-        return match prototype {
+        match prototype {
             Doc(doc) => T::find(doc, self.db, self.collection_name).await,
             Model(model) => {
                 let doc = convert_to_doc(&model)?;
-                return T::find(doc, self.db, self.collection_name).await;
+                T::find(doc, self.db, self.collection_name).await
             }
-        };
+        }
     }
     async fn find_with_callback<F: Fn(T)>(&self, prototype: Prototype<T>, call_back: F) {
         match prototype {
