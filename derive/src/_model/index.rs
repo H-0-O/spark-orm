@@ -4,7 +4,7 @@ use proc_macro2::{Span, TokenStream, TokenTree};
 use quote::{quote, quote_spanned};
 use syn::{Attribute, Field, FieldsNamed, Meta};
 
-use crate::model::MODEL_ATTRIBUTE_NAME;
+use crate::_model::MODEL_ATTRIBUTE_NAME;
 
 ///Manages the index-related attributes for a model.
 //TODO index manager must be part of __struct and indexes must go to BaseModel

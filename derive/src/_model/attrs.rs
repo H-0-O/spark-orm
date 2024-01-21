@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::Meta;
 
-use crate::model::__struct;
+use crate::_model::__struct;
 
 impl __struct {
     pub(crate) fn get_collection_name(&self) -> Option<TokenStream> {

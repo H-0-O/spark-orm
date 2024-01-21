@@ -17,7 +17,8 @@ pub struct Book {
     other_info: OtherInfo,
     some: u8,
 }
-
+#[create_model]
+pub struct MyFF;
 #[derive(Model, Serialize, Deserialize, Debug, Default)]
 #[coll_name = "Authors"]
 pub struct Author {

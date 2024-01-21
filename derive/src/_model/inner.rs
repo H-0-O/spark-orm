@@ -1,4 +1,4 @@
-use crate::model::__struct;
+use crate::_model::__struct;
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;

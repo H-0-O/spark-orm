@@ -1,10 +1,10 @@
 #![allow(
-    dead_code,
-    unused_variables,
-    unused_imports,
-    unused_imports,
-    unused_mut,
-    non_camel_case_types
+dead_code,
+unused_variables,
+unused_imports,
+unused_imports,
+unused_mut,
+non_camel_case_types
 )]
 
 extern crate once_cell;
@@ -15,23 +15,26 @@ extern crate syn;
 
 use proc_macro::TokenStream;
 use std::collections::HashSet;
+use std::io::read_to_string;
 
 use proc_macro2::Ident;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
-use syn::{DeriveInput, Expr, Field, Fields, Member, parse_macro_input};
+use syn::{DeriveInput, Expr, Field, Fields, ItemStruct, Member, parse_macro_input};
 use syn::spanned::Spanned;
+use syn::token::Struct;
 
-use crate::model::__struct;
+use crate::_model::__struct;
 
-mod model;
+mod _model;
 mod utility;
+mod model;
 
 /// Procedural macro to derive the `Model` trait for a struct.
 ///
-/// This macro processes the input struct marked with the #[model] attribute and generates
+/// This macro processes the input struct marked with the #[_model] attribute and generates
 /// an implementation of the `Model` trait. The trait includes a constructor method and
 /// an index registration method. The constructor initializes the struct and registers
-/// its indexes in a MongoDB collection. The #[model] attribute is used to annotate the
+/// its indexes in a MongoDB collection. The #[_model] attribute is used to annotate the
 /// struct that should be treated as a model.
 ///
 /// # Example
@@ -73,4 +76,20 @@ pub fn model(input: TokenStream) -> TokenStream {
     // println!("the expanded {:?} " , expanded.to_string() );
     // TokenStream::from(expanded)
     expanded.into()
+}
+
+#[proc_macro_attribute]
+pub fn create_model(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let __struct = parse_macro_input!(item as ItemStruct);
+    let name = &__struct.ident;
+    match model::generate(&__struct) {
+        Ok(expanded) => expanded,
+        Err(err) => err.write_errors().into()
+    }
+    // let token = quote!(
+    //     struct #name{
+    //         _id: String
+    //     }
+    // );
+    // TokenStream::from(token)
 }
