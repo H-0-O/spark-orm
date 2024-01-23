@@ -1,20 +1,71 @@
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::{Error, ItemStruct};
+use crate::_model::__struct;
 use crate::utility::GeneratorResult;
 
 pub fn generate(__struct: &ItemStruct) -> GeneratorResult<TokenStream> {
     let ident = &__struct.ident;
-    let (impl_generics , ty_generics , where_clause) = __struct.generics.split_for_impl();
-    let have_id = __struct.fields.iter().any(|x|{
-        x.ident.as_ref().unwrap().eq("_id")
-    });
-    if have_id {
-        return Err(
-            Error::new_spanned(ident , "_id can not be set manually ").into()
+    let visibility = &__struct.vis;
+    let (impl_generics, ty_generics, where_clause) = __struct.generics.split_for_impl();
+    let mut filed_expand = quote!();
+    if !check_filed_exists(__struct, "_id") { // check _id exists or not
+        filed_expand = quote!(
+            #[serde(skip_serializing_if = "Option::is_none")]
+            _id: Option<mongodb::bson::oid::ObjectId>,
         )
     }
+    if !check_filed_exists(__struct, "created_at") {
+        filed_expand = quote!(
+            #filed_expand
 
-    println!("Have ID is {:?} " , have_id);
-    Ok(quote!().into())
+            #[serde(skip_serializing_if = "Option::is_none")]
+            created_at: Option<rm_orm::types::DateTime>,
+        )
+    }
+    if !check_filed_exists(__struct, "updated_at") {
+        filed_expand = quote!(
+            #filed_expand
+
+            updated_at: rm_orm::types::DateTime,
+        )
+    }
+    if !check_filed_exists(__struct, "deleted_at") {
+        filed_expand = quote!(
+            #filed_expand
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            deleted_at: Option<rm_orm::types::DateTime>,
+        )
+    }
+    
+    let other_field = generate_other_filed(__struct);
+    Ok(
+        quote!(
+            #[derive(serde::Serialize , serde::Deserialize , Debug , Default)]
+            #visibility struct #ident #impl_generics #where_clause {
+               #filed_expand
+               #other_field
+            }
+        ).into()
+    )
+}
+
+fn generate_other_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream{
+    let mut other_field = quote!();
+    __struct.fields.iter().for_each(|x| {
+        let ident = x.ident.as_ref().unwrap();
+        let filed_type = &x.ty;
+        other_field = quote!(
+            #other_field
+            #ident : #filed_type ,
+        );
+    });
+    other_field
+}
+
+fn check_filed_exists(__struct: &ItemStruct, field_name: &str) -> bool {
+    __struct.fields.iter().any(|x| {
+        x.ident.as_ref().unwrap().eq(field_name)
+    })
 }

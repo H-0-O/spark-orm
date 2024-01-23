@@ -5,6 +5,7 @@ pub mod error;
 pub mod model;
 mod rm_orm;
 pub mod utilities;
+pub mod types;
 
 pub mod futures {
     pub use futures::*;
