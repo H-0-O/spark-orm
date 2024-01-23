@@ -40,9 +40,11 @@ pub fn generate(__struct: &ItemStruct) -> GeneratorResult<TokenStream> {
     }
     
     let other_field = generate_other_filed(__struct);
+    //TODO coll_name must be get from user
     Ok(
         quote!(
-            #[derive(serde::Serialize , serde::Deserialize , Debug , Default)]
+            #[derive(serde::Serialize , serde::Deserialize , Debug , Default , rm_orm::Model)]
+            #[coll_name="Models"]
             #visibility struct #ident #impl_generics #where_clause {
                #filed_expand
                #other_field
