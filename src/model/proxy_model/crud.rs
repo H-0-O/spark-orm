@@ -1,13 +1,13 @@
 use mongodb::bson::to_document;
-use mongodb::Cursor;
 use mongodb::results::InsertOneResult;
+use mongodb::Cursor;
 
 use crate::error::RmORMError;
-use crate::model::{InnerState, Prototype};
 use crate::model::crud::inner_crud::InnerCRUD;
-use crate::model::Prototype::{Doc, Model};
 use crate::model::proxy_model::ProxyModel;
 use crate::model::utility::inner_utility::InnerUtility;
+use crate::model::Prototype::{Doc, Model};
+use crate::model::{InnerState, Prototype};
 use crate::rm_orm::RmORMResult;
 use crate::utilities::convert_to_doc;
 
@@ -24,7 +24,6 @@ pub trait ProxyModelCrud<T> {
     async fn find(&self, prototype: Prototype<T>) -> RmORMResult<Cursor<T>>;
     async fn find_with_callback<F: Fn(T)>(&self, prototype: Prototype<T>, call_back: F);
 }
-
 
 impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
     where
@@ -47,7 +46,7 @@ impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
         where
             T: Send,
             T: Sync,
-            T: Unpin
+            T: Unpin,
     {
         let result = match prototype {
             Doc(doc) => T::find_one(doc, self.db, self.collection_name).await,

@@ -1,10 +1,10 @@
 #![allow(
-dead_code,
-unused_variables,
-unused_imports,
-unused_imports,
-unused_mut,
-non_camel_case_types
+    dead_code,
+    unused_variables,
+    unused_imports,
+    unused_imports,
+    unused_mut,
+    non_camel_case_types
 )]
 
 extern crate once_cell;
@@ -19,15 +19,15 @@ use std::io::read_to_string;
 
 use proc_macro2::Ident;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
-use syn::{DeriveInput, Expr, Field, Fields, ItemStruct, Member, parse_macro_input};
 use syn::spanned::Spanned;
 use syn::token::Struct;
+use syn::{parse_macro_input, DeriveInput, Expr, Field, Fields, ItemStruct, Member};
 
 use crate::_model::__struct;
 
 mod _model;
-mod utility;
 mod model;
+mod utility;
 
 /// Procedural macro to derive the `Model` trait for a struct.
 ///
@@ -84,7 +84,7 @@ pub fn create_model(attr: TokenStream, item: TokenStream) -> TokenStream {
     let name = &__struct.ident;
     match model::generate(&__struct) {
         Ok(expanded) => expanded,
-        Err(err) => err.write_errors().into()
+        Err(err) => err.write_errors().into(),
     }
     // let token = quote!(
     //     struct #name{

@@ -26,11 +26,14 @@ impl __struct {
     ///                     db: dbInstance,
     ///                     collection_name: #collection_name
     /// }
-    pub(in crate::_model) fn generate_constructor(&self, fields_named: &FieldsNamed) -> TokenStream {
+    pub(in crate::_model) fn generate_constructor(
+        &self,
+        fields_named: &FieldsNamed,
+    ) -> TokenStream {
         let st_model = self.generate_base_model_instance();
         let base_model_name = self.get_proxy_model_ident();
         quote! {
-                async fn new<'a>(db: &'a Database) -> #base_model_name<'a , Self> 
+                async fn new<'a>(db: &'a Database) -> #base_model_name<'a , Self>
             {
                 #st_model
             }

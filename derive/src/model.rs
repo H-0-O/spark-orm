@@ -1,8 +1,8 @@
+use crate::_model::__struct;
+use crate::utility::GeneratorResult;
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{Error, ItemStruct};
-use crate::_model::__struct;
-use crate::utility::GeneratorResult;
 
 pub fn generate(__struct: &ItemStruct) -> GeneratorResult<TokenStream> {
     let ident = &__struct.ident;
@@ -38,22 +38,22 @@ pub fn generate(__struct: &ItemStruct) -> GeneratorResult<TokenStream> {
             deleted_at: Option<rm_orm::types::DateTime>,
         )
     }
-    
     let other_field = generate_other_filed(__struct);
     //TODO coll_name must be get from user
-    Ok(
-        quote!(
-            #[derive(serde::Serialize , serde::Deserialize , Debug , Default , rm_orm::Model)]
-            #[coll_name="Models"]
-            #visibility struct #ident #impl_generics #where_clause {
-               #filed_expand
-               #other_field
-            }
-        ).into()
+    //TODO generic types must be annotated with the seder( (deserialize_with = "T::deserialize") or (bound(deserialize = "T: DeserializeOwned" ) )
+    //TODO all developer attribute must forwarded here
+    Ok(quote!(
+        #[derive(serde::Serialize , serde::Deserialize , Debug , Default , rm_orm::Model)]
+        #[coll_name="Model"]
+        #visibility struct #ident #impl_generics #where_clause {
+           #filed_expand
+           #other_field
+        }
     )
+    .into())
 }
 
-fn generate_other_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream{
+fn generate_other_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
     let mut other_field = quote!();
     __struct.fields.iter().for_each(|x| {
         let ident = x.ident.as_ref().unwrap();
@@ -67,7 +67,8 @@ fn generate_other_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream{
 }
 
 fn check_filed_exists(__struct: &ItemStruct, field_name: &str) -> bool {
-    __struct.fields.iter().any(|x| {
-        x.ident.as_ref().unwrap().eq(field_name)
-    })
+    __struct
+        .fields
+        .iter()
+        .any(|x| x.ident.as_ref().unwrap().eq(field_name))
 }

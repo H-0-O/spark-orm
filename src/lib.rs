@@ -4,8 +4,8 @@ mod connection;
 pub mod error;
 pub mod model;
 mod rm_orm;
-pub mod utilities;
 pub mod types;
+pub mod utilities;
 
 pub mod futures {
     pub use futures::*;
@@ -16,5 +16,5 @@ pub mod preload {
     pub use crate::model::proxy_model::crud::ProxyModelCrud;
     pub use crate::model::proxy_model::ProxyModel;
     pub use crate::rm_orm::RmORM;
-    pub use crate::{create_model , Model};
+    pub use crate::{create_model, Model};
 }

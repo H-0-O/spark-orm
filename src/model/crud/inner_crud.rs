@@ -1,21 +1,20 @@
 use futures::StreamExt;
-use mongodb::{Collection, Cursor, Database};
-use mongodb::bson::{doc, Document};
 use mongodb::bson::oid::ObjectId;
+use mongodb::bson::{doc, Document};
 use mongodb::results::InsertOneResult;
+use mongodb::{Collection, Cursor, Database};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::error::RmORMError;
 use crate::rm_orm::{RmORM, RmORMResult};
 
-
 #[allow(async_fn_in_trait)]
 pub trait InnerCRUD
 where
     Self: Sized,
     Self: Serialize,
-    Self: DeserializeOwned
+    Self: DeserializeOwned,
 {
     async fn save(inner: &Self, db: &Database, coll_name: &str) -> RmORMResult<InsertOneResult> {
         let collection = Self::get_coll(db, coll_name);
@@ -76,10 +75,10 @@ where
     where
         Self: Unpin,
         Self: Sync,
-        Self: Send
+        Self: Send,
     {
         let coll = Self::get_coll(db, coll_name);
-        let re = coll.find_one(prototype , None).await;
+        let re = coll.find_one(prototype, None).await;
         RmORM::from_mongo_result(re)
     }
     #[allow(unused_variables)]

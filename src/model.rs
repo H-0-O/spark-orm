@@ -1,18 +1,15 @@
 #![allow(dead_code)]
 
-
-
 use mongodb::bson::Document;
 
-pub mod proxy_model;
 pub mod crud;
+pub mod proxy_model;
 pub mod utility;
 #[derive(Debug)]
-pub enum InnerState{
+pub enum InnerState {
     Filled,
-    Default
+    Default,
 }
-
 
 pub enum Prototype<T> {
     Doc(Document),
