@@ -1,8 +1,13 @@
 use crate::_model::__struct;
 use crate::utility::GeneratorResult;
 use proc_macro::TokenStream;
+use std::any::Any;
+use std::process::id;
+use darling::usage::UsesTypeParams;
 use quote::{quote, ToTokens};
-use syn::{Error, ItemStruct};
+use quote::__private::ext::RepToTokensExt;
+use syn::{Error, ItemStruct, Type};
+use syn::GenericParam;
 
 pub fn generate(__struct: &ItemStruct) -> GeneratorResult<TokenStream> {
     let ident = &__struct.ident;
@@ -54,15 +59,45 @@ pub fn generate(__struct: &ItemStruct) -> GeneratorResult<TokenStream> {
 }
 
 fn generate_other_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
+    let mut gen = &__struct.generics.params;
+
+    let mut gens = vec![];
+    gen.iter().for_each(|gp|{
+        if let GenericParam::Type(tp) = gp{
+            gens.push(tp.clone());
+        }
+    });
+
+    let is_generic = |x: &Type|->bool{
+        gens.iter().any(|f|{
+            f.ident.to_string() == x.to_token_stream().to_string()
+        })
+    };
+
+    //TODO clean this piece of code
     let mut other_field = quote!();
-    __struct.fields.iter().for_each(|x| {
-        let ident = x.ident.as_ref().unwrap();
-        let filed_type = &x.ty;
+    __struct.fields.iter().for_each(|field| {
+        let ident = field.ident.as_ref().unwrap();
+        let filed_type = &field.ty;
+        let is_generic = is_generic(filed_type);
+        println!("is a generic {:?} , {:?} " , ident.to_string() ,is_generic);
+        let field_attr = quote!();
+        println!("before foreach ");
+        field.attrs.iter().for_each(|attr|{
+           let atr_token = attr.into_token_stream();
+            println!("attr token {:?} " , atr_token.to_string());
+        });
+        let generic_att= if is_generic{
+            quote!(  #[serde(bound(deserialize = "T: DeserializeOwned"))] )
+        }else{quote!()};
         other_field = quote!(
             #other_field
+
+            #generic_att
             #ident : #filed_type ,
         );
     });
+
     other_field
 }
 
@@ -72,3 +107,4 @@ fn check_filed_exists(__struct: &ItemStruct, field_name: &str) -> bool {
         .iter()
         .any(|x| x.ident.as_ref().unwrap().eq(field_name))
 }
+

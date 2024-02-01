@@ -1,12 +1,12 @@
 #![allow(
-    dead_code,
-    unused_variables,
-    unused_imports,
-    unused_imports,
-    unused_mut,
-    non_camel_case_types
+dead_code,
+unused_variables,
+unused_imports,
+unused_imports,
+unused_mut,
+non_camel_case_types
 )]
-
+extern crate darling;
 extern crate once_cell;
 extern crate proc_macro;
 extern crate proc_macro2;
@@ -16,12 +16,13 @@ extern crate syn;
 use proc_macro::TokenStream;
 use std::collections::HashSet;
 use std::io::read_to_string;
+use darling::{FromDeriveInput, FromMeta};
 
 use proc_macro2::Ident;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::spanned::Spanned;
 use syn::token::Struct;
-use syn::{parse_macro_input, DeriveInput, Expr, Field, Fields, ItemStruct, Member};
+use syn::{parse_macro_input, DeriveInput, Expr, Field, Fields, ItemStruct, Member, Path};
 
 use crate::_model::__struct;
 

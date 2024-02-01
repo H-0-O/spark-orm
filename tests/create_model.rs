@@ -8,9 +8,14 @@ use rm_orm::preload::*;
 use rm_orm_derive::create_model;
 
 #[create_model]
-struct TestModel {
+struct TestModel<T>
+    where
+    T: Default,
+    T: Serialize,
+    T : DeserializeOwned
+{
     name: String,
-    l_name: String,
+    l_name: T,
     m_name: String,
 }
 #[derive(Model , Default , Serialize , Deserialize)]
