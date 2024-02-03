@@ -97,10 +97,12 @@ pub fn Model(args: TokenStream, item: TokenStream) -> TokenStream {
     let __struct = parse_macro_input!(item as ItemStruct);
     let model_args = parse_nested_meta!(ModelArgs , args);
     let name = &__struct.ident;
-    match model::generate(&__struct , model_args) {
+    let sa = match model::generate(&__struct , &model_args) {
         Ok(expanded) => expanded,
         Err(err) => err.write_errors().into(),
-    }
+    };
+    // panic!("result {:?} " , sa.to_string());
+    sa
     // let token = quote!(
     //     struct #name{
     //         _id: String

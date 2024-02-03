@@ -4,7 +4,6 @@ use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
 use rm_orm::model::InnerState;
 use rm_orm::model::Prototype;
-use rm_orm::preload::*;
 use rm_orm::TModel;
 use serde::{Deserialize, Serialize};
 #[derive(TModel, Serialize, Deserialize, Debug, Default)]

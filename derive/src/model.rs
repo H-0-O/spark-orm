@@ -1,13 +1,20 @@
 use proc_macro::TokenStream;
+use darling::FromMeta;
+use proc_macro2::Ident;
 
-use quote::{quote, ToTokens};
+use quote::{format_ident, quote, ToTokens};
 use syn::{ItemStruct, Type};
 use syn::GenericParam;
+use crate::_model::__Struct;
 use crate::ModelArgs;
 
 use crate::utility::GeneratorResult;
 
-pub fn generate(__struct: &ItemStruct, model_args: ModelArgs) -> GeneratorResult<TokenStream> {
+const INNER_CRUD_TRAIT_PATH: &str = "rm_orm::model::crud::inner_crud::InnerCRUD";
+
+const PROXY_MODEL_STRUCT_PATH: &str = "rm_orm::model::proxy_model::ProxyModel";
+
+pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResult<TokenStream> {
     let ident = &__struct.ident;
     let visibility = &__struct.vis;
     let (impl_generics, _ty_generics, where_clause) = __struct.generics.split_for_impl();
@@ -45,14 +52,28 @@ pub fn generate(__struct: &ItemStruct, model_args: ModelArgs) -> GeneratorResult
     //TODO coll_name must be get from user
     //TODO generic types must be annotated with the seder( (deserialize_with = "T::deserialize") or (bound(deserialize = "T: DeserializeOwned" ) )
     //TODO all developer attribute must forwarded here
-    let collection_name = model_args.coll_name;
+    let mut struct_attrs = quote!();
+    __struct.attrs.iter().for_each(|attr| {
+        struct_attrs = quote!(
+            #struct_attrs
+
+            #attr
+        )
+    });
+    //Generate traits
+    let inner_crud_trait = generate_inner_crud_trait(__struct);
+
+    //model creator implement
+    let model_creator = generate_model_creator_impl(__struct , model_args);
     Ok(quote!(
-        #[derive(serde::Serialize , serde::Deserialize , Debug , Default , rm_orm::TModel)]
-        #[coll_name=#collection_name]
+        #struct_attrs
         #visibility struct #ident #impl_generics #where_clause {
            #filed_expand
            #other_field
         }
+
+        #inner_crud_trait
+        #model_creator
     )
         .into())
 }
@@ -89,8 +110,9 @@ fn generate_other_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
             );
         });
         let generic_att = if is_generic {
-            let deserialize_string = format!("{} : DeserializeOwned", filed_type.to_token_stream().to_string());
+            let deserialize_string = format!("{} : serde::de::DeserializeOwned", filed_type.to_token_stream().to_string());
             quote!(  #[serde(bound(deserialize = #deserialize_string))] )
+            // quote!(    #[serde(bound(deserialize = "T : serde::de::DeserializeOwned"))])
         } else { quote!() };
         other_field = quote!(
             #other_field
@@ -111,3 +133,25 @@ fn check_filed_exists(__struct: &ItemStruct, field_name: &str) -> bool {
         .any(|x| x.ident.as_ref().unwrap().eq(field_name))
 }
 
+fn generate_inner_crud_trait(__struct: &ItemStruct) -> proc_macro2::TokenStream {
+    let model_name = &__struct.ident;
+    let trait_name = syn::Path::from_string(INNER_CRUD_TRAIT_PATH).unwrap();
+    let (impl_generics, type_generics, where_generics) = __struct.generics.split_for_impl();
+    quote! {
+            impl #impl_generics #trait_name for  #model_name #type_generics #where_generics {}
+        }
+}
+
+fn generate_model_creator_impl(__struct: &ItemStruct, model_args: &ModelArgs) -> proc_macro2::TokenStream {
+    let model_name = &__struct.ident;
+    let proxy_model = syn::Path::from_string(PROXY_MODEL_STRUCT_PATH).unwrap();
+    let coll_name = &model_args.coll_name;
+    let (impl_generics, type_generics, where_generics) = __struct.generics.split_for_impl();
+    quote! {
+           impl #impl_generics #model_name #type_generics #where_generics {
+                fn new_model<'a>(db: &'a mongodb::Database) -> #proxy_model<'a , Self>{
+                    #proxy_model::new(db , #coll_name)
+                }
+            }
+        }
+}
