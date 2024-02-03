@@ -1,11 +1,9 @@
-use std::fmt::Display;
 
-use crate::_model::inner::filler;
 use proc_macro2::TokenStream;
-use quote::__private::ext::RepToTokensExt;
-use quote::spanned::Spanned;
-use quote::{format_ident, quote, ToTokens, TokenStreamExt};
+use quote::{format_ident, quote};
 use syn::{Data, DeriveInput, Fields, FieldsNamed};
+
+use crate::_model::inner::Filler;
 
 mod attrs;
 mod constructor;
@@ -15,10 +13,10 @@ const MODEL_ATTRIBUTE_NAME: &str = "model";
 const INNER_CRUD_TRAIT_NAME: &str = "InnerCRUD";
 
 const PROXY_MODEL_STRUCT_NAME: &str = "ProxyModel";
-/// This generate a custom model for each one struct that becomes to a model
+/// This generates a custom model for each one struct that becomes to a model
 /// generate the trait Model{struct name} ex( ModelUser ) and create the constructor and relations for it
-pub struct __struct(DeriveInput);
-impl __struct {
+pub struct __Struct(DeriveInput);
+impl __Struct {
     pub fn new(input: DeriveInput) -> Self {
         Self(input)
     }
@@ -87,6 +85,6 @@ impl __struct {
     }
 
     fn get_model_name(&self) -> String {
-        format_ident!("Model{}", self.0.ident).to_string()
+        format_ident!("TModel{}", self.0.ident).to_string()
     }
 }

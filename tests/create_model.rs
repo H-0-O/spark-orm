@@ -5,20 +5,26 @@ use serde::{Deserialize, Deserializer, Serialize};
 use serde::de::DeserializeOwned;
 
 use rm_orm::preload::*;
-use rm_orm_derive::create_model;
+use rm_orm_derive::Model;
 
-#[create_model]
-struct TestModel<T>
+#[Model(coll_name = "TestModels")]
+struct TestModel<F , T>
     where
+    F: Default,
+    F: Serialize,
+    F : DeserializeOwned,
     T: Default,
     T: Serialize,
-    T : DeserializeOwned
+    T: DeserializeOwned
 {
     name: String,
-    l_name: T,
+    #[serde()]
+    #[model(unique)]
+    l_name: F,
     m_name: String,
+    t_w_w: T
 }
-#[derive(Model , Default , Serialize , Deserialize)]
+#[derive(TModel , Default , Serialize , Deserialize)]
 #[coll_name = "df"]
 struct NModel<T>
     where
@@ -29,17 +35,16 @@ struct NModel<T>
     name: String,
     // #[serde(deserialize_with = "T::deserialize")]
     #[serde(bound(deserialize = "T: DeserializeOwned"))]
-    fName: T
+    f_name: T
 }
 
 #[tokio::test]
-async fn create_model_test() {
-    // let t = TestModel{
-    //     _id: String::from("Hossein")
-    // };
-    // let db = RmORM::global_connect("fdf"  , "ff" , "df" , "df" , "sfsd").await;
-    // let mut test_m = TestModel::new(&db).await;
-    // test_m.m_name = "dfdf".into();
-    // test_m.save().await.unwrap();
-    // println!("Hello {:?} " , test_m);
+async fn create_model_test() -> Result<() , String> {
+    let db = RmORM::global_connect("fdf"  , "ff" , "df" , "df" , "sfsd").await;
+    let mut test_m = TestModel::new(&db).await;
+
+    test_m.m_name = "dfdf".into();
+    let re = test_m.save().await?;
+    println!("Hello {:?} " , test_m);
+    Ok(())
 }

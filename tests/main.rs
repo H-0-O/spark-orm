@@ -5,9 +5,9 @@ use mongodb::Database;
 use rm_orm::model::InnerState;
 use rm_orm::model::Prototype;
 use rm_orm::preload::*;
-use rm_orm::Model;
+use rm_orm::TModel;
 use serde::{Deserialize, Serialize};
-#[derive(Model, Serialize, Deserialize, Debug, Default)]
+#[derive(TModel, Serialize, Deserialize, Debug, Default)]
 #[coll_name = "Books"]
 pub struct Book {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
@@ -19,7 +19,7 @@ pub struct Book {
 }
 #[create_model]
 pub struct MyFF;
-#[derive(Model, Serialize, Deserialize, Debug, Default)]
+#[derive(TModel, Serialize, Deserialize, Debug, Default)]
 #[coll_name = "Authors"]
 pub struct Author {
     _id: Option<ObjectId>,

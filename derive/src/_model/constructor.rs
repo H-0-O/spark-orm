@@ -1,11 +1,11 @@
 use proc_macro2::{Ident, TokenStream};
-use quote::{format_ident, quote, quote_spanned, ToTokens};
+use quote::{format_ident, quote, ToTokens};
 use syn::spanned::Spanned;
-use syn::{Field, FieldsNamed};
+use syn::{FieldsNamed};
 
-use crate::_model::{__struct, PROXY_MODEL_STRUCT_NAME};
+use crate::_model::{__Struct, PROXY_MODEL_STRUCT_NAME};
 
-impl __struct {
+impl __Struct {
     /// Generates the constructor function for the custom model.
     ///
     /// This function produces an asynchronous constructor for the struct annotated with the `model` trait.
@@ -33,7 +33,7 @@ impl __struct {
         let st_model = self.generate_base_model_instance();
         let base_model_name = self.get_proxy_model_ident();
         quote! {
-                async fn new<'a>(db: &'a Database) -> #base_model_name<'a , Self>
+                async fn new<'a>(db: &'a mongodb::Database) -> #base_model_name<'a , Self>
             {
                 #st_model
             }
