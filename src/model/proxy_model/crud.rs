@@ -15,7 +15,7 @@ use crate::utilities::convert_to_doc;
 pub trait ProxyModelCrud<T> {
     async fn save(&mut self) -> RmORMResult<InsertOneResult>;
     async fn update(&mut self) -> RmORMResult<u64>;
-    async fn find_one(&mut self, prototype: Prototype<T>) -> &Self
+    async fn find_one(&mut self, prototype: Prototype<T>) -> RmORMResult<Option<T>>
         where
             T: Send,
             T: Sync,
@@ -42,13 +42,13 @@ impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
         }
         Err(RmORMError::new("Can't update document without id"))
     }
-    async fn find_one(&mut self, prototype: Prototype<T>) -> &Self
+    async fn find_one(&mut self, prototype: Prototype<T>) -> RmORMResult<Option<T>>
         where
             T: Send,
             T: Sync,
             T: Unpin,
     {
-        let result = match prototype {
+        match prototype {
             Doc(doc) => T::find_one(doc, self.db, self.collection_name).await,
             Model(model) => {
                 let converted = convert_to_doc(model);
@@ -57,28 +57,29 @@ impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
                     Err(error) => Err(error),
                 }
             }
-        };
-        match result {
-            Ok(inner) => {
-                if let Some(data) = inner {
-                    let id = self.__get_id_from_non_doc(&data);
-                    match id {
-                        Ok(inner_id) => {
-                            self.__set_object_id(inner_id);
-                        }
-                        Err(error) => {
-                            self.__set_error(error);
-                        }
-                    }
-                    self.fill(data);
-                    self.inner_state = InnerState::Filled;
-                } else {
-                    self.restore_to_default();
-                }
-            }
-            Err(error) => self.__set_error(error),
         }
-        self
+
+        // match result {
+        //     Ok(inner) => {
+        //         if let Some(data) = inner {
+        //             let id = self.__get_id_from_non_doc(&data);
+        //             match id {
+        //                 Ok(inner_id) => {
+        //                     self.__set_object_id(inner_id);
+        //                 }
+        //                 Err(error) => {
+        //                     self.__set_error(error);
+        //                 }
+        //             }
+        //             self.fill(data);
+        //             self.inner_state = InnerState::Filled;
+        //         } else {
+        //             self.restore_to_default();
+        //         }
+        //     }
+        //     Err(error) => self.__set_error(error),
+        // }
+        // self
     }
     async fn find(&self, prototype: Prototype<T>) -> RmORMResult<Cursor<T>> {
         match prototype {
