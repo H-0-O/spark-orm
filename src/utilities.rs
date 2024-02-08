@@ -21,8 +21,7 @@ pub fn create_index_on_model(field_name: &str, name: &str, unique: bool) -> Inde
 pub(crate) fn convert_to_doc<T: Serialize>(model: T) -> RmORMResult<Document> {
     let converted = to_document(&model);
     match converted {
-        Ok(mut doc) => {
-            doc.remove("_id");
+        Ok(doc) => {
             Ok(doc)
         }
         Err(error) => Err(RmORMError::new(&error.to_string())),

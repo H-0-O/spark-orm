@@ -11,10 +11,10 @@ use crate::rm_orm::{RmORM, RmORMResult};
 
 #[allow(async_fn_in_trait)]
 pub trait InnerCRUD
-where
-    Self: Sized,
-    Self: Serialize,
-    Self: DeserializeOwned,
+    where
+        Self: Sized,
+        Self: Serialize,
+        Self: DeserializeOwned,
 {
     async fn save(inner: &Self, db: &Database, coll_name: &str) -> RmORMResult<InsertOneResult> {
         let collection = Self::get_coll(db, coll_name);
@@ -34,7 +34,9 @@ where
                 doc! {
                     "_id" : object_id
                 },
-                inner,
+                doc! {
+                    "$set":inner
+                },
                 None,
             )
             .await;
@@ -72,14 +74,24 @@ where
         db: &Database,
         coll_name: &str,
     ) -> RmORMResult<Option<Self>>
-    where
-        Self: Unpin,
-        Self: Sync,
-        Self: Send,
+        where
+            Self: Unpin,
+            Self: Sync,
+            Self: Send,
     {
         let coll = Self::get_coll(db, coll_name);
         let re = coll.find_one(prototype, None).await;
         RmORM::from_mongo_result(re)
+    }
+
+    async fn delete(_id: &ObjectId, db: &Database, coll_name: &str) {
+        let coll = Self::get_coll(db, coll_name);
+        let re = coll.delete_one(
+            doc! {
+            "_id" : _id
+            },
+            None
+        ).await;
     }
     #[allow(unused_variables)]
     async fn process_attributes(attributes: Vec<String>, collection_name: &str) {

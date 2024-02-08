@@ -23,6 +23,8 @@ pub trait ProxyModelCrud<T> {
     ;
     async fn find(&self, prototype: Prototype<T>) -> RmORMResult<Cursor<T>>;
     async fn find_with_callback<F: Fn(T)>(&self, prototype: Prototype<T>, call_back: F);
+
+    async fn delete(&self) -> RmORMResult<()>;
 }
 
 impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
@@ -37,7 +39,9 @@ impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
     /// update operation
     async fn update(&mut self) -> RmORMResult<u64> {
         let doc = convert_to_doc(&self.inner)?;
-        if let Some(id) = self._id {
+        let _id = doc.get_object_id("_id");
+        println!("the id {:?} ", _id);
+        if let Ok(id) = _id {
             return T::update(&id, doc, self.db, self.collection_name).await;
         }
         Err(RmORMError::new("Can't update document without id"))
@@ -100,5 +104,17 @@ impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
                 }
             }
         }
+    }
+
+    async fn delete(&self) -> RmORMResult<()> {
+        let doc = convert_to_doc(&self.inner)?;
+        let _id = doc.get_object_id("_id");
+        if let Ok(id) = _id{
+            T::delete(&id , self.db , self.collection_name).await;
+            return Ok(());
+        }
+        Err(
+            RmORMError::new("Id doesn't found ")
+        )
     }
 }

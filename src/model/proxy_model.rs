@@ -14,6 +14,7 @@ pub mod crud;
 /// This `ProxyModel` struct serves as an intermediary layer, managing various operations
 /// between the developer and the underlying model implementation. It encapsulates the
 /// model's core functionality, allowing for additional features, error handling, and ...
+#[derive(Debug)]
 pub struct ProxyModel<'a, T> {
     pub(crate) _id: Option<ObjectId>,
     pub(crate) inner: T,
@@ -84,6 +85,9 @@ impl<'a, T> ProxyModel<'a, T> {
     }
     pub fn has_error(&self) -> bool {
         self.last_error.is_some()
+    }
+    pub fn set_id(&mut self , id: Option<ObjectId>){
+        self.__set_object_id(id);
     }
 }
 
