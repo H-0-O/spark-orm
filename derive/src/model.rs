@@ -3,7 +3,7 @@ use darling::FromMeta;
 use proc_macro2::Ident;
 
 use quote::{format_ident, quote, ToTokens};
-use syn::{ItemStruct, Type};
+use syn::{Attribute, ItemStruct, Type};
 use syn::GenericParam;
 use crate::_model::__Struct;
 use crate::ModelArgs;
@@ -48,7 +48,10 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
             deleted_at: Option<rm_orm::types::DateTime>,
         )
     }
-    let other_field = generate_other_filed(__struct);
+
+    // this generates the fields of struct that developer defined
+    let other_field = generate_defined_filed(__struct);
+
     //TODO coll_name must be get from user
     //TODO generic types must be annotated with the seder( (deserialize_with = "T::deserialize") or (bound(deserialize = "T: DeserializeOwned" ) )
     //TODO all developer attribute must forwarded here
@@ -64,7 +67,7 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
     let inner_crud_trait = generate_inner_crud_trait(__struct);
 
     //model creator implement
-    let model_creator = generate_model_creator_impl(__struct , model_args);
+    let model_creator = generate_model_creator_impl(__struct, model_args);
     Ok(quote!(
         #struct_attrs
         #visibility struct #ident #impl_generics #where_clause {
@@ -78,7 +81,7 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
         .into())
 }
 
-fn generate_other_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
+fn generate_defined_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
     let gen = &__struct.generics.params;
 
     let mut gens = vec![];
@@ -100,7 +103,20 @@ fn generate_other_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
         let ident = field.ident.as_ref().unwrap();
         let filed_type = &field.ty;
         let is_generic = is_generic(filed_type);
-        let mut attrs = quote!();
+        
+        // this is for handling missing fields without Option enum
+        
+        let mut attrs = 
+            if !has_attr_exists(&field.attrs, "serde(default)") && 
+                !has_attr_exists(&field.attrs , "model(no_default)")
+            {
+            quote!(
+                #[serde(default)]
+            )
+        }else{
+            quote!()
+        };
+        
         // collect all developer attributes
         field.attrs.iter().for_each(|attr| {
             attrs = quote!(
@@ -154,4 +170,15 @@ fn generate_model_creator_impl(__struct: &ItemStruct, model_args: &ModelArgs) ->
                 }
             }
         }
+}
+
+/// attr_to_compare must be without # and [] , like serde(default)
+fn has_attr_exists(attrs: &[Attribute], attr_to_compare: &str) -> bool {
+    let mut has_it = false;
+    attrs.iter().for_each(|attr|{
+        if attr.meta.to_token_stream().to_string() == attr_to_compare{
+            has_it = true;
+        }
+    });
+   has_it 
 }

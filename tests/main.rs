@@ -1,128 +1,83 @@
-use futures::StreamExt;
-use mongodb::bson::doc;
-use mongodb::bson::oid::ObjectId;
+use std::sync::Arc;
+use mongodb::bson::{doc, Document};
 use mongodb::Database;
-use rm_orm::model::InnerState;
-use rm_orm::model::Prototype;
-use rm_orm::TModel;
+use mongodb::results::InsertOneResult;
 use serde::{Deserialize, Serialize};
-#[derive(TModel, Serialize, Deserialize, Debug, Default)]
-#[coll_name = "Books"]
-pub struct Book {
-    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
-    _id: Option<ObjectId>,
-    #[model(unique)]
+use rm_orm::{RmORM, Model, ProxyModelCrud, RmORMError, RmORMResult};
+use rm_orm::model::crud::inner_crud::InnerCRUD;
+use rm_orm::model::Prototype;
+
+#[Model(coll_name = "users")]
+#[derive(Serialize, Deserialize, Default, Debug)]
+struct User {
+    age: u32,
     name: String,
-    other_info: OtherInfo,
-    some: u8,
+    email: String,
 }
-#[create_model]
-pub struct MyFF;
-#[derive(TModel, Serialize, Deserialize, Debug, Default)]
-#[coll_name = "Authors"]
-pub struct Author {
-    _id: Option<ObjectId>,
-}
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct OtherInfo {
-    print_number: u32,
-    fee: u8,
-}
-#[derive(Serialize)]
-pub struct RawTest {
-    age: u8,
-    name: &'static str,
-}
-// TODO move the tests into a tests/crud.rs file
-// TODO
-#[tokio::test]
-async fn _save() {}
-async fn _s_d() -> Result<(), RmORMError> {
-    let db = get_test_db().await;
-    let mut new_book = Book::new(&db).await;
 
-    new_book.set_inner_state(InnerState::Filled);
-    new_book.name = "The First Book".to_string();
-    new_book.other_info.print_number = 55;
-    new_book.some = 22;
-    new_book.other_info.fee = 4;
-    new_book.save().await?;
-    Ok(())
-}
+
 #[tokio::test]
-async fn __raw_save() {
-    let db = get_test_db().await;
-    let test = RawTest {
-        name: "Hossein",
-        age: 78,
+async fn create() {
+    let db = get_db().await;
+    let mut user = User::new_model(&db);
+    user.name = "Hossein".to_string();
+    user.email = "Rm_Orm_test".to_string();
+    let re = user.save().await;
+
+    // This unwraps the result and return insert ID
+    re.unwrap();
+}
+
+
+#[tokio::test]
+async fn find_one() {
+    let db = get_db().await;
+    let mut user = User::new_model(&db);
+    let sample = doc! {
+        "name" : "Hossein",
+        "email" : "Rm_Orm_test"
     };
-    let re = db
-        .collection::<RawTest>("Books")
-        .insert_one(test, None)
-        .await;
-}
+    let re = user.find_one(Prototype::Doc(sample)).await;
 
-#[tokio::test]
-async fn __find() {
-    let db = get_test_db().await;
-    let the_book = Book::new(&db).await;
-    let result = the_book.find(Prototype::Model(get_test_book())).await;
-    match result {
-        Ok(mut stream) => {
-            while let Some(res_doc) = stream.next().await {
-                if let Ok(book) = res_doc {
-                    // println!(" The Book is {:?} ", book);
-                }
-            }
-        }
-        Err(error) => {
-            panic!(" {} ", error.to_string())
-        }
-    }
+    let founded = re.unwrap();
 
-    println!("__find is passed ");
-}
-
-#[tokio::test]
-async fn __find_one_with_doc() {
-    let db = get_test_db().await;
-    let mut the_book = Book::new(&db).await;
-    let prototype = Prototype::Doc(doc! {
-            "name": "SomeThing"
-    });
-    the_book.find_one(prototype).await;
-}
-
-#[tokio::test]
-async fn __find_one_with_model() {
-    let db = get_test_db().await;
-    let mut the_book = Book::new(&db).await;
-    let prototype: Prototype<Book> = Prototype::Model(Book {
-        _id: None,
-        name: "The First Book".to_string(),
-        other_info: OtherInfo {
-            fee: 5,
-            print_number: 56,
-        },
-        some: 23,
-    });
-    let last = the_book.find_one(prototype).await;
-}
-
-#[tokio::test]
-async fn __update() {
-    let db = get_test_db().await;
-    let mut the_book = Book::new(&db).await;
-}
-fn get_test_book() -> Book {
-    Book {
-        _id: None,
-        some: 52,
-        name: "Hassan".to_string(),
-        other_info: OtherInfo::default(),
+    if founded.is_some() {
+        println!("The result {:?} ", founded.unwrap());
+    } else {
+        println!("The result is empty");
     }
 }
 
-async fn get_test_db() -> Database {
-    RmORM::connect("admin", "123", "localhost", "27019", "main_db").await
+
+async fn get_db() -> Arc<Database> {
+    RmORM::global_connect("root", "123", "localhost", "6789", "rm_orm_db").await
+}
+
+
+#[tokio::test]
+async fn __find_one() {
+    let db = get_db().await;
+    let col = &db.collection::<Document>("users");
+    let ds = doc! {
+        "name" : "Hossein"
+    };
+    let re = col.find_one(ds, None).await;
+    let res = re.unwrap();
+    if res.is_some() {
+        println!("the ")
+    } else {
+        println!("Nothing");
+    }
+}
+
+#[tokio::test]
+async fn find() {
+    let db = get_db().await;
+    let we = doc! {
+        "name" : "Hossein"
+    };  
+    let mut raw_re = User::find(we , &db , "users").await.unwrap();
+    while raw_re.advance().await.unwrap() {
+        println!("the doc is {:?} " , raw_re.deserialize_current().unwrap());
+    }
 }

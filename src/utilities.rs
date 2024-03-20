@@ -1,9 +1,9 @@
 use mongodb::bson::{to_document, Document};
 use mongodb::{bson::doc, options::IndexOptions, IndexModel};
 use serde::Serialize;
+use crate::client::RmORMResult;
 
 use crate::error::RmORMError;
-use crate::rm_orm::RmORMResult;
 
 pub fn create_index_on_model(field_name: &str, name: &str, unique: bool) -> IndexModel {
     let index_options = IndexOptions::builder()
