@@ -74,9 +74,43 @@ async fn find() {
     let db = get_db().await;
     let we = doc! {
         "name" : "Hossein"
-    };  
-    let mut raw_re = User::find(we , &db , "users").await.unwrap();
+    };
+    let mut raw_re = User::find(we, &db, "users").await.unwrap();
     while raw_re.advance().await.unwrap() {
-        println!("the doc is {:?} " , raw_re.deserialize_current().unwrap());
+        println!("the doc is {:?} ", raw_re.deserialize_current().unwrap());
     }
+}
+
+#[tokio::test]
+async fn find_with_callback() {
+    let db = get_db().await;
+
+    let we = doc! {
+        "name" : "Hossein"
+    };
+    User::find_with_callback(
+        we,
+        |f| {
+            println!("the User is {:?}", f.name);
+        },
+        &db,
+        "users",
+    ).await;
+}
+
+#[tokio::test]
+async fn soft_delete(){
+    todo!()
+}
+#[tokio::test]
+async fn force_delete(){
+    todo!()
+}
+
+async fn on_create(){
+
+}
+
+async fn on_created(){
+
 }
