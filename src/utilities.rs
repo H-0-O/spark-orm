@@ -1,9 +1,9 @@
 use mongodb::bson::{to_document, Document};
 use mongodb::{bson::doc, options::IndexOptions, IndexModel};
 use serde::Serialize;
-use crate::client::RmORMResult;
+use crate::client::Result;
 
-use crate::error::RmORMError;
+use crate::error::Error;
 
 pub fn create_index_on_model(field_name: &str, name: &str, unique: bool) -> IndexModel {
     let index_options = IndexOptions::builder()
@@ -18,12 +18,12 @@ pub fn create_index_on_model(field_name: &str, name: &str, unique: bool) -> Inde
         .build()
 }
 
-pub(crate) fn convert_to_doc<T: Serialize>(model: T) -> RmORMResult<Document> {
+pub(crate) fn convert_to_doc<T: Serialize>(model: T) -> Result<Document> {
     let converted = to_document(&model);
     match converted {
         Ok(doc) => {
             Ok(doc)
         }
-        Err(error) => Err(RmORMError::new(&error.to_string())),
+        Err(error) => Err(Error::new(&error.to_string())),
     }
 }

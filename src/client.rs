@@ -4,19 +4,20 @@ use mongodb::{Client, Database};
 use once_cell::sync::OnceCell;
 
 use crate::connection::{create_client, create_client_options};
-use crate::error::RmORMError;
+use crate::error::Error;
 
-pub type RmORMResult<T> = std::result::Result<T, RmORMError>;
-pub(crate) static R_M_ORM_STATIC: OnceCell<RmORM> = OnceCell::new();
+pub type Result<T> = std::result::Result<T, Error>;
+
+pub(crate) static R_M_ORM_STATIC: OnceCell<Spark> = OnceCell::new();
 
 #[derive(Debug)]
-pub struct RmORM {
+pub struct Spark {
     #[allow(dead_code)]
     client: Client,
     db: Arc<Database>,
 }
 
-impl RmORM {
+impl Spark {
     pub async fn global_connect(
         user_name: &str,
         password: &str,
@@ -33,7 +34,7 @@ impl RmORM {
         //     .run_command(doc! {"ping": 1}, None)
         //     .await?;
         let db = client.database(db_name);
-        let rs = RmORM {
+        let rs = Spark {
             client,
             db: Arc::new(db),
         };
@@ -55,17 +56,17 @@ impl RmORM {
         client.database(db_name)
     }
     pub fn get_db() -> Arc<Database> {
-        let r_spark = R_M_ORM_STATIC.get();
-        match r_spark {
+        let spark = R_M_ORM_STATIC.get();
+        match spark {
             Some(rs) => Arc::clone(&rs.db),
             None => panic!("The Data base not set !!!"),
         }
     }
 
-    pub fn from_mongo_result<T>(re: mongodb::error::Result<T>) -> RmORMResult<T> {
+    pub fn from_mongo_result<T>(re: mongodb::error::Result<T>) -> Result<T> {
         match re {
             Ok(inner_re) => Ok(inner_re),
-            Err(error) => Err(RmORMError::new(&error.to_string())),
+            Err(error) => Err(Error::new(&error.to_string())),
         }
     }
 }

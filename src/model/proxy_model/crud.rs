@@ -2,29 +2,28 @@ use mongodb::bson::to_document;
 use mongodb::results::InsertOneResult;
 use mongodb::Cursor;
 
-use crate::error::RmORMError;
+use crate::error::Error;
 use crate::model::crud::inner_crud::InnerCRUD;
 use crate::model::proxy_model::ProxyModel;
-use crate::model::utility::inner_utility::InnerUtility;
 use crate::model::Prototype::{Doc, Model};
-use crate::model::{InnerState, Prototype};
-use crate::rm_orm::RmORMResult;
+use crate::model::{Prototype};
+use crate::spark_orm::Result;
 use crate::utilities::convert_to_doc;
 
 #[allow(async_fn_in_trait)]
 pub trait ProxyModelCrud<T> {
-    async fn save(&mut self) -> RmORMResult<InsertOneResult>;
-    async fn update(&mut self) -> RmORMResult<u64>;
-    async fn find_one(&mut self, prototype: Prototype<T>) -> RmORMResult<Option<T>>
+    async fn save(&mut self) -> Result<InsertOneResult>;
+    async fn update(&mut self) -> Result<u64>;
+    async fn find_one(&mut self, prototype: Prototype<T>) -> Result<Option<T>>
         where
             T: Send,
             T: Sync,
             T: Unpin
     ;
-    async fn find(&self, prototype: Prototype<T>) -> RmORMResult<Cursor<T>>;
+    async fn find(&self, prototype: Prototype<T>) -> Result<Cursor<T>>;
     async fn find_with_callback<F: Fn(T)>(&self, prototype: Prototype<T>, call_back: F);
 
-    async fn delete(&self) -> RmORMResult<()>;
+    async fn delete(&self) -> Result<()>;
 }
 
 impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
@@ -33,20 +32,20 @@ impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
         T: Default,
 {
     /// insert operation
-    async fn save(&mut self) -> RmORMResult<InsertOneResult> {
+    async fn save(&mut self) -> Result<InsertOneResult> {
         T::save(&self.inner, self.db, self.collection_name).await
     }
     /// update operation
-    async fn update(&mut self) -> RmORMResult<u64> {
+    async fn update(&mut self) -> Result<u64> {
         let doc = convert_to_doc(&self.inner)?;
         let _id = doc.get_object_id("_id");
         println!("the id {:?} ", _id);
         if let Ok(id) = _id {
             return T::update(&id, doc, self.db, self.collection_name).await;
         }
-        Err(RmORMError::new("Can't update document without id"))
+        Err(Error::new("Can't update document without id"))
     }
-    async fn find_one(&mut self, prototype: Prototype<T>) -> RmORMResult<Option<T>>
+    async fn find_one(&mut self, prototype: Prototype<T>) -> Result<Option<T>>
         where
             T: Send,
             T: Sync,
@@ -85,7 +84,7 @@ impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
         // }
         // self
     }
-    async fn find(&self, prototype: Prototype<T>) -> RmORMResult<Cursor<T>> {
+    async fn find(&self, prototype: Prototype<T>) -> Result<Cursor<T>> {
         match prototype {
             Doc(doc) => T::find(doc, self.db, self.collection_name).await,
             Model(model) => {
@@ -106,7 +105,7 @@ impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
         }
     }
 
-    async fn delete(&self) -> RmORMResult<()> {
+    async fn delete(&self) -> Result<()> {
         let doc = convert_to_doc(&self.inner)?;
         let _id = doc.get_object_id("_id");
         if let Ok(id) = _id{
@@ -114,7 +113,7 @@ impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
             return Ok(());
         }
         Err(
-            RmORMError::new("Id doesn't found ")
+            Error::new("Id doesn't found ")
         )
     }
 }

@@ -1,10 +1,10 @@
 [package]
 authors = ["H_O_O"]
-name = "rm_orm_derive"
+name = "spark-orm-derive"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-description = "Macros for rm_orm"
+description = "Macros for spark-orm"
 repository = "https://github.com/RSaprk/ORM.git"
 [lib]
 proc-macro = true

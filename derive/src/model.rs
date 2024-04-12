@@ -10,9 +10,9 @@ use crate::ModelArgs;
 
 use crate::utility::GeneratorResult;
 
-const INNER_CRUD_TRAIT_PATH: &str = "rm_orm::model::crud::inner_crud::InnerCRUD";
+const INNER_CRUD_TRAIT_PATH: &str = "spark_orm::model::crud::inner_crud::InnerCRUD";
 
-const PROXY_MODEL_STRUCT_PATH: &str = "rm_orm::model::proxy_model::ProxyModel";
+const PROXY_MODEL_STRUCT_PATH: &str = "spark_orm::model::proxy_model::ProxyModel";
 
 pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResult<TokenStream> {
     let ident = &__struct.ident;
@@ -30,14 +30,14 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
             #filed_expand
 
             #[serde(skip_serializing_if = "Option::is_none")]
-            created_at: Option<rm_orm::types::DateTime>,
+            created_at: Option<spark_orm::types::DateTime>,
         )
     }
     if !check_filed_exists(__struct, "updated_at") {
         filed_expand = quote!(
             #filed_expand
 
-            updated_at: rm_orm::types::DateTime,
+            updated_at: spark_orm::types::DateTime,
         )
     }
     if !check_filed_exists(__struct, "deleted_at") {
@@ -45,7 +45,7 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
             #filed_expand
 
             #[serde(skip_serializing_if = "Option::is_none")]
-            deleted_at: Option<rm_orm::types::DateTime>,
+            deleted_at: Option<spark_orm::types::DateTime>,
         )
     }
 

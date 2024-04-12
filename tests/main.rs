@@ -1,11 +1,10 @@
 use std::sync::Arc;
 use mongodb::bson::{doc, Document};
 use mongodb::Database;
-use mongodb::results::InsertOneResult;
 use serde::{Deserialize, Serialize};
-use rm_orm::{RmORM, Model, ProxyModelCrud, RmORMError, RmORMResult};
-use rm_orm::model::crud::inner_crud::InnerCRUD;
-use rm_orm::model::Prototype;
+use spark_orm::{Model, ProxyModelCrud, Spark};
+use spark_orm::model::crud::inner_crud::InnerCRUD;
+use spark_orm::model::Prototype;
 
 #[Model(coll_name = "users")]
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -21,7 +20,7 @@ async fn create() {
     let db = get_db().await;
     let mut user = User::new_model(&db);
     user.name = "Hossein".to_string();
-    user.email = "Rm_Orm_test".to_string();
+    user.email = "spark_orm_test".to_string();
     let re = user.save().await;
 
     // This unwraps the result and return insert ID
@@ -35,7 +34,7 @@ async fn find_one() {
     let mut user = User::new_model(&db);
     let sample = doc! {
         "name" : "Hossein",
-        "email" : "Rm_Orm_test"
+        "email" : "spark_orm_test"
     };
     let re = user.find_one(Prototype::Doc(sample)).await;
 
@@ -50,7 +49,7 @@ async fn find_one() {
 
 
 async fn get_db() -> Arc<Database> {
-    RmORM::global_connect("root", "123", "localhost", "6789", "rm_orm_db").await
+    Spark::global_connect("root", "123", "localhost", "6789", "rm_orm_db").await
 }
 
 

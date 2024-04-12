@@ -1,7 +1,7 @@
-use crate::error::RmORMError;
-use crate::model::InnerState;
-use crate::rm_orm::RmORMResult;
-use crate::utilities::convert_to_doc;
+use spark_orm::error::Error;
+use spark_orm::model::InnerState;
+use spark_orm::Result;
+use spark_orm::utilities::convert_to_doc;
 use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
 use serde::Serialize;
@@ -21,7 +21,7 @@ pub struct ProxyModel<'a, T> {
     pub(crate) inner_state: InnerState,
     pub(crate) db: &'a Database,
     pub(crate) collection_name: &'a str,
-    pub(crate) last_error: Option<RmORMError>,
+    pub(crate) last_error: Option<Error>,
 }
 
 /// Implements the `Deref` trait for the `ProxyModel` struct, allowing direct access to the
@@ -44,7 +44,7 @@ impl<'a, T: 'a> DerefMut for ProxyModel<'a, T> {
     }
 }
 impl<'a, T> ProxyModel<'a, T> {
-    pub(crate) fn __set_error(&mut self, error: RmORMError) {
+    pub(crate) fn __set_error(&mut self, error: Error) {
         self.last_error = Some(error);
     }
     pub(crate) fn __set_object_id(&mut self, ob_id: Option<ObjectId>) {
@@ -53,7 +53,7 @@ impl<'a, T> ProxyModel<'a, T> {
     pub(crate) fn __get_id_from_non_doc<M: Serialize>(
         &self,
         data: &M,
-    ) -> RmORMResult<Option<ObjectId>> {
+    ) -> Result<Option<ObjectId>> {
         let converted = convert_to_doc(data);
 
         match converted {
@@ -62,7 +62,7 @@ impl<'a, T> ProxyModel<'a, T> {
                 if let Some(bson_id) = id {
                     return Ok(bson_id.as_object_id());
                 }
-                Err(RmORMError::new(""))
+                Err(Error::new(""))
             }
             Err(error) => Err(error),
         }
@@ -80,7 +80,7 @@ impl<'a, T> ProxyModel<'a, T> {
     pub fn get_inner_state(&self) -> &InnerState {
         &self.inner_state
     }
-    pub fn get_last_error(&self) -> Option<&RmORMError> {
+    pub fn get_last_error(&self) -> Option<&Error> {
         self.last_error.as_ref()
     }
     pub fn has_error(&self) -> bool {

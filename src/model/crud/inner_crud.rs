@@ -6,8 +6,8 @@ use mongodb::{Collection, Cursor, Database};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use crate::error::RmORMError;
-use crate::rm_orm::{RmORM, RmORMResult};
+use crate::error::Error;
+use crate::spark_orm::{Spark, Result};
 
 #[allow(async_fn_in_trait)]
 pub trait InnerCRUD
@@ -16,10 +16,10 @@ pub trait InnerCRUD
         Self: Serialize,
         Self: DeserializeOwned,
 {
-    async fn save(inner: &Self, db: &Database, coll_name: &str) -> RmORMResult<InsertOneResult> {
+    async fn save(inner: &Self, db: &Database, coll_name: &str) -> Result<InsertOneResult> {
         let collection = Self::get_coll(db, coll_name);
         let re = collection.insert_one(inner, None).await;
-        RmORM::from_mongo_result(re)
+        Spark::from_mongo_result(re)
     }
 
     async fn update(
@@ -27,7 +27,7 @@ pub trait InnerCRUD
         inner: Document,
         db: &Database,
         coll_name: &str,
-    ) -> RmORMResult<u64> {
+    ) -> Result<u64> {
         let coll = Self::get_coll(db, coll_name);
         let result = coll
             .update_one(
@@ -42,17 +42,17 @@ pub trait InnerCRUD
             .await;
         match result {
             Ok(inner_result) => Ok(inner_result.modified_count),
-            Err(error) => Err(RmORMError::new(&error.to_string())),
+            Err(error) => Err(Error::new(&error.to_string())),
         }
     }
     async fn find(
         prototype: Document,
         db: &Database,
         coll_name: &str,
-    ) -> RmORMResult<Cursor<Self>> {
+    ) -> Result<Cursor<Self>> {
         let coll = Self::get_coll(db, coll_name);
         let result = coll.find(prototype, None).await;
-        RmORM::from_mongo_result(result)
+        Spark::from_mongo_result(result)
     }
     async fn find_with_callback<F: Fn(Self)>(
         prototype: Document,
@@ -73,7 +73,7 @@ pub trait InnerCRUD
         prototype: Document,
         db: &Database,
         coll_name: &str,
-    ) -> RmORMResult<Option<Self>>
+    ) -> Result<Option<Self>>
         where
             Self: Unpin,
             Self: Sync,
@@ -81,16 +81,16 @@ pub trait InnerCRUD
     {
         let coll = Self::get_coll(db, coll_name);
         let re = coll.find_one(prototype, None).await;
-        RmORM::from_mongo_result(re)
+        Spark::from_mongo_result(re)
     }
 
     async fn delete(_id: &ObjectId, db: &Database, coll_name: &str) {
         let coll = Self::get_coll(db, coll_name);
-        let re = coll.delete_one(
+        let _ = coll.delete_one(
             doc! {
             "_id" : _id
             },
-            None
+            None,
         ).await;
     }
     #[allow(unused_variables)]
