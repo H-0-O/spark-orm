@@ -5,7 +5,7 @@ use mongodb::results::InsertOneResult;
 use mongodb::{Collection, Cursor, Database};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-
+use futures::future;
 use crate::error::Error;
 use crate::spark_orm::{Spark, Result};
 
@@ -54,21 +54,42 @@ pub trait InnerCRUD
         let result = coll.find(prototype, None).await;
         Spark::from_mongo_result(result)
     }
-    async fn find_with_callback<F: Fn(Self)>(
+    async fn find_with_callback<F: FnMut(Self)>(
         prototype: Document,
-        callback: F,
+        mut callback: F,
         db: &Database,
         coll_name: &str,
     ) {
-        let stream_curs = Self::find(prototype, db, coll_name).await;
-        if let Ok(mut docs) = stream_curs {
-            while let Some(res_doc) = docs.next().await {
-                if let Ok(doc) = res_doc {
-                    callback(doc);
-                }
-            }
-        }
+
+        let for_map = Self::find(prototype, db, coll_name).await.unwrap();
+        let wq = for_map.for_each(|f|{
+            callback(f.unwrap());
+            future::ready(())
+        });
+        wq.await;
+        // let stream_curs = Self::find(prototype.clone(), db, coll_name).await;
+        // if let Ok(mut docs) = stream_curs {
+        //     while let Some(res_doc) = docs.next().await {
+        //         if let Ok(doc) = res_doc {
+        //             callback(doc);
+        //         }
+        //     }
+        // }
     }
+
+    async fn find_with_map<F: FnMut(Self)>(
+        prototype: Document,
+        mut callback: F,
+        db: &Database,
+        coll_name: &str,
+    ){
+        let for_map = Self::find(prototype, db, coll_name).await.unwrap();
+        let fs = for_map.map(|f|{
+            return "df";
+        });
+
+    }
+
     async fn find_one(
         prototype: Document,
         db: &Database,
