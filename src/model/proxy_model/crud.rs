@@ -21,7 +21,7 @@ pub trait ProxyModelCrud<T> {
             T: Unpin
     ;
     async fn find(&self, prototype: Prototype<T>) -> Result<Cursor<T>>;
-    async fn find_with_callback<F: Fn(T)>(&self, prototype: Prototype<T>, call_back: F);
+    async fn find_with_callback<F: FnMut(T)>(&self, prototype: Prototype<T>, call_back: F) -> Result<()>;
 
     async fn delete(&self) -> Result<()>;
 }
@@ -93,13 +93,22 @@ impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
             }
         }
     }
-    async fn find_with_callback<F: Fn(T)>(&self, prototype: Prototype<T>, call_back: F) {
+    async fn find_with_callback<F: FnMut(T)>(&self, prototype: Prototype<T>, call_back: F) -> Result<()> {
         match prototype {
             Doc(doc) => T::find_with_callback(doc, call_back, self.db, self.collection_name).await,
             Model(model) => {
                 let converted = to_document(&model);
-                if let Ok(doc) = converted {
-                    T::find_with_callback(doc, call_back, self.db, self.collection_name).await
+                match converted {
+                    Ok(doc) => {
+                        T::find_with_callback(doc, call_back, self.db, self.collection_name).await
+                    }
+                    Err(error) => {
+                        Err(
+                            Error::new(
+                                &error.to_string()
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -108,8 +117,8 @@ impl<'a, T> ProxyModelCrud<T> for ProxyModel<'a, T>
     async fn delete(&self) -> Result<()> {
         let doc = convert_to_doc(&self.inner)?;
         let _id = doc.get_object_id("_id");
-        if let Ok(id) = _id{
-            T::delete(&id , self.db , self.collection_name).await;
+        if let Ok(id) = _id {
+            T::delete(&id, self.db, self.collection_name).await;
             return Ok(());
         }
         Err(

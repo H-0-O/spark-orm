@@ -1,5 +1,5 @@
 use mongodb::bson::DateTime as MDateTime;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
 
 #[derive(Deserialize, Serialize)]

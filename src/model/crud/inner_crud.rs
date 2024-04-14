@@ -59,14 +59,17 @@ pub trait InnerCRUD
         mut callback: F,
         db: &Database,
         coll_name: &str,
-    ) {
+    ) -> Result<()>{
 
-        let for_map = Self::find(prototype, db, coll_name).await.unwrap();
-        let wq = for_map.for_each(|f|{
+        let founded = Self::find(prototype, db, coll_name).await?;
+
+        let each_block = founded.for_each(|f|{
             callback(f.unwrap());
             future::ready(())
         });
-        wq.await;
+        each_block.await;
+
+        Ok(())
         // let stream_curs = Self::find(prototype.clone(), db, coll_name).await;
         // if let Ok(mut docs) = stream_curs {
         //     while let Some(res_doc) = docs.next().await {
@@ -83,11 +86,7 @@ pub trait InnerCRUD
         db: &Database,
         coll_name: &str,
     ){
-        let for_map = Self::find(prototype, db, coll_name).await.unwrap();
-        let fs = for_map.map(|f|{
-            return "df";
-        });
-
+      todo!()
     }
 
     async fn find_one(
