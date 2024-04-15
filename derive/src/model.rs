@@ -1,92 +1,184 @@
-use std::fmt::Display;
+use proc_macro::TokenStream;
+use darling::FromMeta;
+use proc_macro2::Ident;
 
-use crate::model::inner::filler;
-use proc_macro2::TokenStream;
-use quote::__private::ext::RepToTokensExt;
-use quote::spanned::Spanned;
-use quote::{format_ident, quote, ToTokens, TokenStreamExt};
-use syn::{Data, DeriveInput, Fields, FieldsNamed};
+use quote::{format_ident, quote, ToTokens};
+use syn::{Attribute, ItemStruct, Type};
+use syn::GenericParam;
+use crate::_model::__Struct;
+use crate::ModelArgs;
 
-mod attrs;
-mod constructor;
-mod index;
-mod inner;
-const MODEL_ATTRIBUTE_NAME: &str = "model";
-const INNER_CRUD_TRAIT_NAME: &str = "InnerCRUD";
+use crate::utility::GeneratorResult;
 
-const PROXY_MODEL_STRUCT_NAME: &str = "ProxyModel";
-/// This generate a custom model for each one struct that becomes to a model
-/// generate the trait Model{struct name} ex( ModelUser ) and create the constructor and relations for it
-pub struct __struct(DeriveInput);
-impl __struct {
-    pub fn new(input: DeriveInput) -> Self {
-        Self(input)
+const INNER_CRUD_TRAIT_PATH: &str = "spark_orm::model::crud::inner_crud::InnerCRUD";
+
+const PROXY_MODEL_STRUCT_PATH: &str = "spark_orm::model::proxy_model::ProxyModel";
+
+pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResult<TokenStream> {
+    let ident = &__struct.ident;
+    let visibility = &__struct.vis;
+    let (impl_generics, _ty_generics, where_clause) = __struct.generics.split_for_impl();
+    let mut filed_expand = quote!();
+    if !check_filed_exists(__struct, "_id") { // check _id exists or not
+        filed_expand = quote!(
+            #[serde(skip_serializing_if = "Option::is_none")]
+            _id: Option<mongodb::bson::oid::ObjectId>,
+        )
+    }
+    if !check_filed_exists(__struct, "created_at") {
+        filed_expand = quote!(
+            #filed_expand
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            created_at: Option<spark_orm::types::DateTime>,
+        )
+    }
+    if !check_filed_exists(__struct, "updated_at") {
+        filed_expand = quote!(
+            #filed_expand
+
+            updated_at: spark_orm::types::DateTime,
+        )
+    }
+    if !check_filed_exists(__struct, "deleted_at") {
+        filed_expand = quote!(
+            #filed_expand
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            deleted_at: Option<spark_orm::types::DateTime>,
+        )
     }
 
-    pub fn generate_trait(&self) -> TokenStream {
-        let model_name = &self.0.ident;
-        let trait_name = format_ident!("{}", INNER_CRUD_TRAIT_NAME);
-        let (impl_generics, type_generics, where_generics) = self.0.generics.split_for_impl();
-        quote! {
+    // this generates the fields of struct that developer defined
+    let other_field = generate_defined_filed(__struct);
+
+    //TODO coll_name must be get from user
+    //TODO generic types must be annotated with the seder( (deserialize_with = "T::deserialize") or (bound(deserialize = "T: DeserializeOwned" ) )
+    //TODO all developer attribute must forwarded here
+    let mut struct_attrs = quote!();
+    __struct.attrs.iter().for_each(|attr| {
+        struct_attrs = quote!(
+            #struct_attrs
+
+            #attr
+        )
+    });
+    //Generate traits
+    let inner_crud_trait = generate_inner_crud_trait(__struct);
+
+    //model creator implement
+    let model_creator = generate_model_creator_impl(__struct, model_args);
+    Ok(quote!(
+        #struct_attrs
+        #visibility struct #ident #impl_generics #where_clause {
+           #filed_expand
+           #other_field
+        }
+
+        #inner_crud_trait
+        #model_creator
+    )
+        .into())
+}
+
+fn generate_defined_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
+    let gen = &__struct.generics.params;
+
+    let mut gens = vec![];
+    gen.iter().for_each(|gp| {
+        if let GenericParam::Type(tp) = gp {
+            gens.push(tp.clone());
+        }
+    });
+
+    let is_generic = |x: &Type| -> bool{
+        gens.iter().any(|f| {
+            f.ident.to_string() == x.to_token_stream().to_string()
+        })
+    };
+
+    //TODO clean this piece of code
+    let mut other_field = quote!();
+    __struct.fields.iter().for_each(|field| {
+        let ident = field.ident.as_ref().unwrap();
+        let filed_type = &field.ty;
+        let is_generic = is_generic(filed_type);
+        
+        // this is for handling missing fields without Option enum
+        
+        let mut attrs = 
+            if !has_attr_exists(&field.attrs, "serde(default)") && 
+                !has_attr_exists(&field.attrs , "model(no_default)")
+            {
+            quote!(
+                #[serde(default)]
+            )
+        }else{
+            quote!()
+        };
+        
+        // collect all developer attributes
+        field.attrs.iter().for_each(|attr| {
+            attrs = quote!(
+                #attrs
+
+                #attr
+            );
+        });
+        let generic_att = if is_generic {
+            let deserialize_string = format!("{} : serde::de::DeserializeOwned", filed_type.to_token_stream().to_string());
+            quote!(  #[serde(bound(deserialize = #deserialize_string))] )
+            // quote!(    #[serde(bound(deserialize = "T : serde::de::DeserializeOwned"))])
+        } else { quote!() };
+        other_field = quote!(
+            #other_field
+
+            #attrs
+            #generic_att
+            #ident : #filed_type ,
+        );
+    });
+
+    other_field
+}
+
+fn check_filed_exists(__struct: &ItemStruct, field_name: &str) -> bool {
+    __struct
+        .fields
+        .iter()
+        .any(|x| x.ident.as_ref().unwrap().eq(field_name))
+}
+
+fn generate_inner_crud_trait(__struct: &ItemStruct) -> proc_macro2::TokenStream {
+    let model_name = &__struct.ident;
+    let trait_name = syn::Path::from_string(INNER_CRUD_TRAIT_PATH).unwrap();
+    let (impl_generics, type_generics, where_generics) = __struct.generics.split_for_impl();
+    quote! {
             impl #impl_generics #trait_name for  #model_name #type_generics #where_generics {}
         }
-    }
-    /// Generates the implementation code for the custom model.
-    ///
-    /// This method takes the struct annotated with the `model` trait and produces the necessary
-    /// implementation code for the associated custom model. It includes the construction logic
-    /// and index registration for the model's fields. The generated implementation is ready for use
-    /// when deriving the custom model for the specified struct.
-    ///
-    /// # Returns
-    ///
-    /// A `TokenStream` representing the implementation code for the custom model.
-    ///
-    pub fn generate_impl(&self) -> TokenStream {
-        let model_name = &self.0.ident;
-        let fields_name = Self::extract_struct_fields(&self.0.data);
-        let constructor = self.generate_constructor(fields_name);
-        let filler = self.generate_fill_method();
-        let (impl_generics, type_generics, where_generics) = self.0.generics.split_for_impl();
-        quote! {
+}
+
+fn generate_model_creator_impl(__struct: &ItemStruct, model_args: &ModelArgs) -> proc_macro2::TokenStream {
+    let model_name = &__struct.ident;
+    let proxy_model = syn::Path::from_string(PROXY_MODEL_STRUCT_PATH).unwrap();
+    let coll_name = &model_args.coll_name;
+    let (impl_generics, type_generics, where_generics) = __struct.generics.split_for_impl();
+    quote! {
            impl #impl_generics #model_name #type_generics #where_generics {
-                #constructor
-                #filler
-            }
-        }
-    }
-
-    /// Extracts the named fields from the struct data.
-    ///
-    /// This method is responsible for extracting the named fields from the struct data
-    /// and returning them for further processing. It is designed to handle structs
-    /// annotated with the `model` trait, ensuring that only named structs are supported.
-    ///
-    /// # Arguments
-    ///
-    /// - `data`: A reference to the struct data.
-    ///
-    /// # Returns
-    ///
-    /// A reference to the named fields within the struct data.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the data structure is not a named struct, as only named structs are currently supported.
-    ///
-    fn extract_struct_fields(data: &Data) -> &FieldsNamed {
-        if let Data::Struct(the_data) = data {
-            match &the_data.fields {
-                Fields::Named(struct_members) => {
-                    return struct_members;
+                fn new_model<'a>(db: &'a mongodb::Database) -> #proxy_model<'a , Self>{
+                    #proxy_model::new(db , #coll_name)
                 }
-                _ => unimplemented!("I have no idea about UnNamed or Units fields "),
             }
         }
-        todo!("the Enum and Union not supported yet ");
-    }
+}
 
-    fn get_model_name(&self) -> String {
-        format_ident!("Model{}", self.0.ident).to_string()
-    }
+/// attr_to_compare must be without # and [] , like serde(default)
+fn has_attr_exists(attrs: &[Attribute], attr_to_compare: &str) -> bool {
+    let mut has_it = false;
+    attrs.iter().for_each(|attr|{
+        if attr.meta.to_token_stream().to_string() == attr_to_compare{
+            has_it = true;
+        }
+    });
+   has_it 
 }

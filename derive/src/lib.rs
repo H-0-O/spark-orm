@@ -1,12 +1,4 @@
-#![allow(
-    dead_code,
-    unused_variables,
-    unused_imports,
-    unused_imports,
-    unused_mut,
-    non_camel_case_types
-)]
-
+extern crate darling;
 extern crate once_cell;
 extern crate proc_macro;
 extern crate proc_macro2;
@@ -14,24 +6,44 @@ extern crate quote;
 extern crate syn;
 
 use proc_macro::TokenStream;
-use std::collections::HashSet;
 
-use proc_macro2::Ident;
-use quote::{format_ident, quote, quote_spanned, ToTokens};
-use syn::{DeriveInput, Expr, Field, Fields, Member, parse_macro_input};
+use darling::{FromAttributes, FromDeriveInput, FromMeta};
+use quote::{quote, ToTokens};
+use syn::{DeriveInput, ItemStruct, parse_macro_input};
 use syn::spanned::Spanned;
 
-use crate::model::__struct;
+use crate::_model::__Struct;
 
+mod _model;
 mod model;
 mod utility;
 
+macro_rules! parse_nested_meta {
+    ($ty:ty, $args:expr) => {{
+        let meta = match darling::ast::NestedMeta::parse_meta_list(proc_macro2::TokenStream::from(
+            $args,
+        )) {
+            Ok(v) => v,
+            Err(e) => {
+                return TokenStream::from(darling::Error::from(e).write_errors());
+            }
+        };
+
+        match <$ty>::from_list(&meta) {
+            Ok(object_args) => object_args,
+            Err(err) => return TokenStream::from(err.write_errors()),
+        }
+    }};
+}
+
+
+
 /// Procedural macro to derive the `Model` trait for a struct.
 ///
-/// This macro processes the input struct marked with the #[model] attribute and generates
+/// This macro processes the input struct marked with the #[_model] attribute and generates
 /// an implementation of the `Model` trait. The trait includes a constructor method and
 /// an index registration method. The constructor initializes the struct and registers
-/// its indexes in a MongoDB collection. The #[model] attribute is used to annotate the
+/// its indexes in a MongoDB collection. The #[_model] attribute is used to annotate the
 /// struct that should be treated as a model.
 ///
 /// # Example
@@ -55,13 +67,13 @@ mod utility;
 ///
 /// A `TokenStream` representing the expanded code with the generated implementation
 /// of the `Model` trait for the input struct.
-#[proc_macro_derive(Model, attributes(model, coll_name))]
+#[proc_macro_derive(TModel, attributes(model, coll_name))]
 pub fn model(input: TokenStream) -> TokenStream {
     // Parse the input into a DeriveInput struct
     let input = parse_macro_input!(input as DeriveInput);
 
     // Create a new instance of the __struct struct to process the input
-    let model = __struct::new(input);
+    let model = __Struct::new(input);
     let the_trait = model.generate_trait();
     // Generate the implementation of the Model trait
     let the_impl = model.generate_impl();
@@ -73,4 +85,28 @@ pub fn model(input: TokenStream) -> TokenStream {
     // println!("the expanded {:?} " , expanded.to_string() );
     // TokenStream::from(expanded)
     expanded.into()
+}
+
+#[derive(FromMeta , Debug)]
+struct ModelArgs{
+    coll_name: String
+}
+#[proc_macro_attribute]
+#[allow(non_snake_case)]
+pub fn Model(args: TokenStream, item: TokenStream) -> TokenStream {
+    let __struct = parse_macro_input!(item as ItemStruct);
+    let model_args = parse_nested_meta!(ModelArgs , args);
+    let name = &__struct.ident;
+    let sa = match model::generate(&__struct , &model_args) {
+        Ok(expanded) => expanded,
+        Err(err) => err.write_errors().into(),
+    };
+    // panic!("result {:?} " , sa.to_string());
+    sa
+    // let token = quote!(
+    //     struct #name{
+    //         _id: String
+    //     }
+    // );
+    // TokenStream::from(token)
 }

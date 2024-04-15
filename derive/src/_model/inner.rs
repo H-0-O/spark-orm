@@ -1,10 +1,10 @@
-use crate::model::__struct;
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
-use syn::spanned::Spanned;
 use syn::{Field, FieldsNamed};
+use syn::spanned::Spanned;
+use crate::_model::__Struct;
 
-pub(crate) trait filler {
+pub(crate) trait Filler {
     fn generate_fill_method(&self) -> TokenStream;
 
     /// Generates the function parameters for the constructor.
@@ -33,7 +33,7 @@ pub(crate) trait filler {
     /// A `TokenStream` representing the struct instance fields.
     fn generate_struct_instance(&self, fields_named: &FieldsNamed) -> TokenStream;
 }
-impl filler for __struct {
+impl Filler for __Struct {
     fn generate_fill_method(&self) -> TokenStream {
         let fields = Self::extract_struct_fields(&self.0.data);
         let params = self.generate_filler_parameters(fields);

@@ -1,19 +1,21 @@
-pub use rm_orm_derive::*;
+pub use spark_orm_derive::*;
+
+extern crate self as spark_orm;
 
 mod connection;
 pub mod error;
 pub mod model;
-mod rm_orm;
+pub mod types;
 pub mod utilities;
+pub mod client;
 
 pub mod futures {
     pub use futures::*;
 }
+pub use preload::*;
 pub mod preload {
-    pub use crate::error::RmORMError;
-    pub use crate::model::crud::inner_crud::InnerCRUD;
-    pub use crate::model::proxy_model::crud::ProxyModelCrud;
-    pub use crate::model::proxy_model::ProxyModel;
-    pub use crate::rm_orm::RmORM;
-    pub use crate::Model;
+    pub use spark_orm::error::Error;
+    pub use spark_orm::model::proxy_model::crud::ProxyModelCrud;
+    pub use spark_orm::{Model, TModel};
+    pub use spark_orm::client::{Result, Spark};
 }

@@ -2,9 +2,9 @@ use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::Meta;
 
-use crate::model::__struct;
+use crate::_model::__Struct;
 
-impl __struct {
+impl __Struct {
     pub(crate) fn get_collection_name(&self) -> Option<TokenStream> {
         for attr in &self.0.attrs {
             if let Meta::NameValue(named_attr) = &attr.meta {
