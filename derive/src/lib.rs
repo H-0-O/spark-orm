@@ -7,10 +7,9 @@ extern crate syn;
 
 use proc_macro::TokenStream;
 
-use darling::{FromAttributes, FromDeriveInput, FromMeta};
-use quote::{quote, ToTokens};
+use darling::{FromMeta};
+use quote::{quote};
 use syn::{DeriveInput, ItemStruct, parse_macro_input};
-use syn::spanned::Spanned;
 
 use crate::_model::__Struct;
 
@@ -35,7 +34,6 @@ macro_rules! parse_nested_meta {
         }
     }};
 }
-
 
 
 /// Procedural macro to derive the `Model` trait for a struct.
@@ -87,17 +85,16 @@ pub fn model(input: TokenStream) -> TokenStream {
     expanded.into()
 }
 
-#[derive(FromMeta , Debug)]
-struct ModelArgs{
-    coll_name: String
+#[derive(FromMeta, Debug)]
+struct ModelArgs {
+    coll_name: String,
 }
 #[proc_macro_attribute]
 #[allow(non_snake_case)]
 pub fn Model(args: TokenStream, item: TokenStream) -> TokenStream {
     let __struct = parse_macro_input!(item as ItemStruct);
     let model_args = parse_nested_meta!(ModelArgs , args);
-    let name = &__struct.ident;
-    let sa = match model::generate(&__struct , &model_args) {
+    let sa = match model::generate(&__struct, &model_args) {
         Ok(expanded) => expanded,
         Err(err) => err.write_errors().into(),
     };

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use mongodb::bson::{doc, Document};
-use mongodb::Database;
+use mongodb::{Database, IndexModel};
 use serde::{Deserialize, Serialize};
 use spark_orm::{Model, ProxyModelCrud, Spark};
 use spark_orm::model::crud::inner_crud::InnerCRUD;
@@ -9,7 +9,19 @@ use spark_orm::model::Prototype;
 #[Model(coll_name = "users")]
 #[derive(Serialize, Deserialize, Default, Debug)]
 struct User {
+    #[index]
     age: u32,
+    #[index]
+    name: String,
+    email: String,
+}
+
+#[Model(coll_name = "products")]
+#[derive(Serialize, Deserialize, Default, Debug)]
+struct Product {
+    #[index]
+    age: u32,
+    #[index]
     name: String,
     email: String,
 }
@@ -108,9 +120,47 @@ async fn force_delete(){
 }
 
 async fn on_create(){
-
+    todo!()
 }
 
 async fn on_created(){
-
+    todo!()
 }
+
+#[tokio::test]
+async fn index_attribute(){
+    let db = get_db().await;
+    User::new_model(&db);
+    User::new_model(&db);
+    Product::new_model(&db);
+    Product::new_model(&db);
+    // let index_model = IndexModel::builder().keys(
+    //     doc! {
+    //         "user_name": 1
+    //     }
+    // ).build();
+    // let coll = &db.collection::<Document>("users");
+    // let result = coll.create_index(
+    //     index_model,
+    //     None,
+    // ).await;
+
+    // println!(
+    //     "the result {result:?}"
+    // );
+
+    // struct User{
+    //     #[index]
+    //     user_name: String
+    // }
+}
+
+async fn unique_attribute(){
+    // struct User{
+    //     // TODO in parenthesis must write error message
+    //     #[unique (" the user name :user_name is exists ") ]
+    //     user_name: String
+    // }
+}
+
+
