@@ -1,4 +1,5 @@
 use proc_macro::TokenStream;
+use std::env::join_paths;
 use darling::{FromMeta};
 
 use quote::{quote, ToTokens};
@@ -200,16 +201,21 @@ fn generate_register_attribute_function(__struct: &ItemStruct) -> proc_macro2::T
             );
         }
     });
+    
     // println!("the indexes {:?}" , indexes.to_string());
     quote!(
-        pub async fn register_attributes(db: &mongodb::Database , coll_name: &str){
+        pub fn register_attributes(db: &mongodb::Database , coll_name: &str){
             let indexes = vec![#indexes];
             static registerer: std::sync::Once = std::sync::Once::new();
             //TODO this must be fix
             
-            // registerer.call_once( async move ||{
-            //     spark_orm::Spark::register_attributes::<Self>(db , indexes , coll_name).await;
-            // });
+            registerer.call_once(  ||{
+                 spark_orm::Spark::register_attributes::<Self>(db , indexes , coll_name.to_string());
+                // the_fn();
+
+                // tokio::join!(the_fn);
+                // futures::executor::block_on(the_fn);
+            });
         }
     )
 }

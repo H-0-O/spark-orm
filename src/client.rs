@@ -3,8 +3,9 @@ use std::sync::Arc;
 use mongodb::{Client, Database, IndexModel};
 use mongodb::bson::doc;
 use once_cell::sync::OnceCell;
-use serde::{Serialize};
+use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
+
 
 use crate::connection::{create_client, create_client_options};
 use crate::error::Error;
@@ -73,40 +74,41 @@ impl Spark {
         }
     }
 
-    pub async fn register_attributes<Model>(db: &Database, attributes: Vec<&str>, coll_name: &str)
+    pub fn register_attributes<Model>(db: &Database, attributes: Vec<&str>, coll_name: String)
         where
             Model: Serialize,
             Model: DeserializeOwned,
             Model: Send,
             Model: Sync,
     {
-        // let index_model = IndexModel::builder().keys(
-        //     doc! {
-        //         "user_name": 1
-        //     }
-        // ).build();
-        // let coll = &db.collection::<Document>("users");
-        // let result = coll.create_index(
-        //     index_model,
-        //     None,
-        // ).await;
-        println!("the attrs {attributes:?}");
-        for attr in attributes {
-            let att = attr.to_string();
-            let index_model = IndexModel::builder().keys(
-                doc! {
-                 att: 1
-             }
-            ).build();
-            let coll = db.collection::<Model>(coll_name);
-            let re = coll.create_index(
-                index_model,
-                None,
-            ).await.expect(
-                &format!("Can't create attribute on {attr}")
-            );
-            println!("the result is {re:?}");
-        }
-       
+        let s_attributes: Vec<String> = attributes.iter().map(|sd| {
+            sd.to_string()
+        }).collect();
+
+        let dd = db.clone();
+        let qwe = coll_name.clone();
+        tokio::spawn(async move  {
+            let wq = dd.collection::<Model>(&qwe);
+            // let coll = db.collection::<Model>(coll_name);
+            for attr in s_attributes {
+                let index_model = IndexModel::builder().keys(
+                    doc! {
+                       attr: 1
+                   }
+                ).build();
+                println!("before future");
+                let fu = wq.create_index(
+                    index_model,
+                    None,
+                ).await.unwrap();
+            }
+        });
+
+        // tokio::spawn(async |x| {
+        //     let coll = db.collection::<Model>(coll_name);
+        //     println!("enter in scoped thread");
+        // 
+        //     println!("finish the scoped thread");
+        // });
     }
 }

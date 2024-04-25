@@ -130,10 +130,10 @@ async fn on_created(){
 #[tokio::test]
 async fn index_attribute(){
     let db = get_db().await;
-    User::new_model(&db);
-    User::new_model(&db);
-    Product::new_model(&db);
-    Product::new_model(&db);
+    let mut user = User::new_model(&db);
+    user.name = "Hossein".to_string();
+    
+    user.save().await.unwrap();
     // let index_model = IndexModel::builder().keys(
     //     doc! {
     //         "user_name": 1
