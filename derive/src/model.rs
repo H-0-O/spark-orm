@@ -1,5 +1,4 @@
 use proc_macro::TokenStream;
-use std::env::join_paths;
 use darling::{FromMeta};
 
 use quote::{quote, ToTokens};
@@ -166,7 +165,7 @@ fn generate_model_creator_impl(__struct: &ItemStruct, model_args: &ModelArgs) ->
     let (impl_generics, type_generics, where_generics) = __struct.generics.split_for_impl();
     quote! {
            impl #impl_generics #model_name #type_generics #where_generics {
-                pub fn new_model<'a>(db: &'a mongodb::Database) -> #proxy_model<'a , Self>{
+                pub fn new_model<'a>(db: &'a std::sync::Arc<mongodb::Database>) -> #proxy_model<'a , Self>{
                     Self::register_attributes(db , #coll_name);
                     #proxy_model::new(db , #coll_name)
                 }
@@ -190,7 +189,6 @@ fn attr_exists(attrs: &[Attribute], attr_to_compare: &str) -> bool {
 fn generate_register_attribute_function(__struct: &ItemStruct) -> proc_macro2::TokenStream {
     let fields = &__struct.fields;
     let mut indexes = quote!();
-    println!("HEEEEEEEELL");
     fields.iter().for_each(|field| {
         if attr_exists(&field.attrs, "index") {
             let ident = field.ident.to_token_stream().to_string();
@@ -204,17 +202,13 @@ fn generate_register_attribute_function(__struct: &ItemStruct) -> proc_macro2::T
     
     // println!("the indexes {:?}" , indexes.to_string());
     quote!(
-        pub fn register_attributes(db: &mongodb::Database , coll_name: &str){
+        pub fn register_attributes(db: &std::sync::Arc<mongodb::Database> , coll_name: &str){
             let indexes = vec![#indexes];
             static registerer: std::sync::Once = std::sync::Once::new();
             //TODO this must be fix
             
-            registerer.call_once(  ||{
-                 spark_orm::Spark::register_attributes::<Self>(db , indexes , coll_name.to_string());
-                // the_fn();
-
-                // tokio::join!(the_fn);
-                // futures::executor::block_on(the_fn);
+            registerer.call_once( ||{
+                 spark_orm::Spark::register_attributes::<Self>(db.clone() , indexes , coll_name.to_string());
             });
         }
     )

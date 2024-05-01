@@ -1,6 +1,6 @@
 use std::future::Future;
 use std::sync::Arc;
-use futures::executor::block_on;
+use std::time::Duration;
 use spark_orm::macros::{error, trace};
 use mongodb::{Client, Database, IndexModel};
 use mongodb::bson::doc;
@@ -8,6 +8,7 @@ use once_cell::sync::OnceCell;
 use serde::{Serialize};
 use serde::de::DeserializeOwned;
 use futures::StreamExt;
+use mongodb::options::{DropIndexOptions, ListIndexesOptions};
 
 use crate::connection::{create_client, create_client_options};
 use crate::error::Error;
@@ -86,27 +87,42 @@ impl Spark {
             Model: Sync,
     {
         let mut attrs = attributes.iter().map(|attr| attr.to_string()).collect::<Vec<String>>();
+        let max_time_to_drop = Some(Duration::from_secs(5));
+        let (tx, _) = tokio::sync::oneshot::channel();
 
         trace!("Spawn task to register indexes");
         let register_attrs = async move {
             let coll = db.collection::<Model>(&coll_name);
-            let previous_indexes = coll.list_indexes(None).await.unwrap();
+            let previous_indexes = coll.list_indexes(
+                Some(
+                    ListIndexesOptions::builder().max_time(
+                        max_time_to_drop
+                    ).build()
+                )
+            ).await;
+            if let Err(error) = previous_indexes {
+                error!(
+                    "Can't unpack the previous_indexes {error}"
+                );
+                return;
+            }
             let mut keys_to_remove = Vec::new();
-            let foreach_future = previous_indexes.for_each(|pr| {
+            let foreach_future = previous_indexes.unwrap().for_each(|pr| {
                 match pr {
                     Ok(index_model) => {
-                        for key in index_model.keys {
-                            if key.0 == "_id" { continue; }
-                            if let Some(pos) = attrs.iter().position(|k| k == &key.0) {
-                                // means attribute exists in struct and database and not need to create it
-                                attrs.remove(pos);
-                            } else if let Some(rw) = &index_model.options {
-                                // means the attribute must remove because not exists in struct
-                                keys_to_remove.push(
-                                    rw.name.clone()
-                                )
+                        index_model.keys.iter().for_each(|key| {
+                            if key.0 != "_id" {
+                                if let Some(pos) = attrs.iter().position(|k| k == key.0) {
+                                    // means attribute exists in struct and database and not need to create it
+                                    attrs.remove(pos);
+                                } else if let Some(rw) = &index_model.options {
+                                    // means the attribute must remove because not exists in struct
+                                    keys_to_remove.push(
+                                        rw.name.clone()
+                                    )
+                                }
                             }
-                        }
+                        });
                     }
                     Err(error) => {
                         error!(
@@ -127,30 +143,39 @@ impl Spark {
                 }
                     ).build()
                 }).collect::<Vec<IndexModel>>();
-
+           
             for name in keys_to_remove {
                 let key = name.as_ref().unwrap();
-                coll.drop_index(key, None).await.unwrap();
+                let _ = coll.drop_index(key,
+                                        Some(
+                                            DropIndexOptions::builder().max_time(
+                                                max_time_to_drop
+                                            ).build()
+                                        ),
+                ).await;
             }
-            let result = coll.create_indexes(
-                attrs,
-                None,
-            ).await;
-
-            if let Err(error) = result {
-                error!(
-                    "Can't create indexes : {:?}" ,
-                    error
-                );
+            if !attrs.is_empty() {
+                let result = coll.create_indexes(
+                    attrs,
+                    None,
+                ).await;
+                if let Err(error) = result {
+                    error!(
+                        "Can't create indexes : {:?}" ,
+                        error
+                    );
+                }
             }
         };
-        
-        // let wq = tokio::task::spawn(register_attrs);
-        
-        // let bui = tokio::runtime::Builder::new_current_thread().thread_name("hello").build();
 
-        // bui.as_ref().unwrap().block_on(register_attrs);
+        let task = tokio::spawn(register_attrs);
 
+        let wait_for_complete = async move {
+            let _ = task.await;
+            let _ = tx.send(());
+        };
+
+        tokio::task::spawn(wait_for_complete);
     }
 
 
