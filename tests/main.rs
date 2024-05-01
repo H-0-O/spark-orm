@@ -1,4 +1,6 @@
 use std::sync::Arc;
+use std::thread::sleep;
+use std::time::Duration;
 use mongodb::bson::{doc, Document};
 use mongodb::{Database, IndexModel};
 use serde::{Deserialize, Serialize};
@@ -30,6 +32,7 @@ struct Product {
 #[tokio::test]
 async fn create() {
     let db = get_db().await;
+     
     let mut user = User::new_model(&db);
     user.name = "Hossein".to_string();
     user.email = "spark_orm_test".to_string();
@@ -38,6 +41,9 @@ async fn create() {
     // This unwraps the result and return insert ID
     re.unwrap();
 }
+
+
+
 
 
 #[tokio::test]
@@ -134,6 +140,10 @@ async fn index_attribute(){
     user.name = "Hossein".to_string();
     
     user.save().await.unwrap();
+
+
+    sleep(Duration::from_secs(15));
+
     // let index_model = IndexModel::builder().keys(
     //     doc! {
     //         "user_name": 1
