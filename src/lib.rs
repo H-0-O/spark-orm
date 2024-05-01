@@ -8,6 +8,7 @@ pub mod model;
 pub mod types;
 pub mod utilities;
 pub mod client;
+mod macros;
 
 pub mod futures {
     pub use futures::*;
