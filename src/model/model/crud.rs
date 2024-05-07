@@ -4,7 +4,7 @@ use mongodb::Cursor;
 
 use crate::error::Error;
 use crate::model::crud::inner_crud::InnerCRUD;
-use crate::model::proxy_model::ProxyModel;
+use crate::model::model::ProxyModel;
 use crate::model::Prototype::{Doc, Model};
 use crate::model::{Prototype};
 use crate::spark_orm::Result;
