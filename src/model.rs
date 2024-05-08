@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use std::borrow::Borrow;
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
@@ -9,31 +10,19 @@ use mongodb::options::{FindOneOptions, InsertOneOptions, UpdateOptions};
 use serde::de::DeserializeOwned;
 use serde::{Serialize};
 use mongodb::error::Result as MongodbResult;
+use mongodb::results::UpdateResult;
 use crate::Spark;
 
-
-// impl<M> From<Box<M>> for Document
-//     where
-//         M: Serialize,
-//         M: Sized
-// {
-//
-//     fn from(value: M) -> Self {
-//         let result = mongodb::bson::to_document(&value);
-//         match result {
-//             Ok(doc) => doc,
-//             Err(_) => doc! {}
-//         }
-//     }
-// }
+// TODO: this must move to types module
 type Id = mongodb::bson::Bson;
 
-#[derive(Debug , Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Model<'a, M>
 {
     inner: Box<M>,
     #[serde(skip)]
     db: Arc<Database>,
+    #[serde(skip)]
     collection_name: &'a str,
     #[serde(skip)]
     collection: Collection<M>,
@@ -135,7 +124,7 @@ impl<'a, M> Model<'a, M>
         ).await?;
         Ok(re.inserted_id)
     }
-    pub async fn find_one(mut self, doc: impl Into<Document> , options: impl Into<Option<FindOneOptions>>)
+    pub async fn find_one(mut self, doc: impl Into<Document>, options: impl Into<Option<FindOneOptions>>)
                           -> MongodbResult<Option<Self>>
     {
         let result = self.collection.find_one(
@@ -153,27 +142,57 @@ impl<'a, M> Model<'a, M>
         }
     }
 
-    pub async fn update(&self, query: impl Into<Document>, doc: impl Into<Document>, options: impl Into<Option<UpdateOptions>>) {
-        let converted = mongodb::bson::to_document(&self.inner);
-        let id = converted.unwrap().get("_id").unwrap();
-        //TODO complete from here 
+    /// this is raw update , and you can pass document or your model 
+    /// # Examples
+    /// ## with the raw doc
+    ///  ```
+    ///  let user_model = User::new_model(Some(&db));
+    ///     let updated = user_model.update(
+    ///         doc! {
+    ///             "name": "Hossein",
+    ///         },
+    ///         doc! {
+    ///            "$set": {
+    ///                 "name": "Hossein 33"
+    ///             }
+    ///         },
+    ///         None,
+    ///     ).await.unwrap(); 
+    /// ```
+    /// ## with the model 
+    pub async fn update(&self, query: impl Into<Document>, doc: impl Into<Document>, options: impl Into<Option<UpdateOptions>>)
+                        -> MongodbResult<UpdateResult>
+    {
+        println!("query {:?}" , query.into());
         self.collection.update_one(
-            query.into(),
+            // query.into(),
+            doc! {},
             doc.into(),
             options,
-        ).await.unwrap();
+        ).await
     }
     pub fn fill(&mut self, inner: M) {
         *self.inner = inner;
     }
 }
 
-impl<'a , M> From<Model<'a , M>> for Document
-    where 
-        M: Serialize
+// converts
+
+//TODO both must be flatten and leave inner from inner item in document
+impl<'a, M> From<Model<'a, M>> for Document
+    where
+        M: Serialize,
 {
     fn from(value: Model<M>) -> Self {
         mongodb::bson::to_document(&value).unwrap()
     }
 }
 
+impl<'a, M> From<&Model<'a, M>> for Document
+    where
+        M: Serialize
+{
+    fn from(value: &Model<'a, M>) -> Self {
+        mongodb::bson::to_document(value).unwrap()
+    }
+}

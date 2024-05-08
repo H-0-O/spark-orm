@@ -154,7 +154,11 @@ fn generate_from_to_document_trait(__struct: &ItemStruct) -> proc_macro2::TokenS
             }
         }
 
-
+        impl From<&#model_name> for mongodb::bson::Document {
+             fn from(value: &#model_name) -> Self {
+                mongodb::bson::to_document(&value).unwrap()
+            }
+        }
     )
 }
 
