@@ -34,7 +34,8 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
         filed_expand = quote!(
             #filed_expand
 
-            updated_at: spark_orm::types::DateTime,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            updated_at: Option<spark_orm::types::DateTime>,
         )
     }
     if !check_filed_exists(__struct, "deleted_at") {

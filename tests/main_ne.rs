@@ -1,10 +1,8 @@
+use std::str::FromStr;
 use std::sync::Arc;
-use getset::Setters;
-use mongodb::bson;
-use mongodb::bson::Document;
+use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
 use serde::{Deserialize, Serialize};
-// use mongodb::bson::doc;
 use spark_orm::Spark;
 use spark_orm_derive::Model;
 
@@ -12,6 +10,7 @@ use spark_orm_derive::Model;
 #[derive(Serialize , Deserialize , Default , Debug)]
 struct User {
     name: String,
+    age: u64
 }
 
 
@@ -20,19 +19,6 @@ struct User {
 #[derive(Serialize , Deserialize , Default , Debug)]
 struct Product {
     name: String,
-}
-
-#[derive(Serialize , Debug)]
-struct WE{
-    name: String
-}
-
-impl From<WE> for Document
-
-{
-    fn from(value: WE) -> Self {
-        mongodb::bson::to_document(&value).unwrap()
-    }
 }
 
 // impl From<Product> for Document{
@@ -44,24 +30,38 @@ impl From<WE> for Document
 //         }
 //     }
 // }
-impl Product {
-    pub fn difjo(self){
 
-    }
-}
+
 #[tokio::test]
-async fn main2() {
+async fn save() {
+    let db = get_db().await;
+    let mut user_model = User::new_model(Some(&db));
+    user_model.name = "Hossein".to_string();
+    user_model.save(None).await.unwrap();
+}
+
+#[tokio::test]
+async fn find_one(){
     let db = get_db().await;
     let user_model = User::new_model(Some(&db));
-    let  mut product_model = Product::new_model(Some(&db));
-    product_model.name = "difjodijf".to_string();
-    let pr = Product::default();
-    product_model.find_one(
-        pr,
+    let mut sample = User::default();
+    sample.name = "Hossein".to_string();
+    let founded = user_model.find_one(
+        sample,
         None
-    ).await.unwrap().unwrap().set_name("difjdofj".to_string());
-    // let er = product_model.set_name("difj".to_string());
-    println!("the user Model {:?}" , user_model);
+    ).await.unwrap();
+    println!("The founded object {:?} " , founded);
+
+}
+
+#[tokio::test]
+async fn update(){
+    let db = get_db().await;
+    let mut user_model = User::new_model(Some(&db));
+    user_model._id = Some(ObjectId::from_str("663a7a27cc6093d989a1e279").unwrap());
+    user_model.name = "Hossein 2".to_string();
+    user_model.age = 58;
+    user_model.save(None).await.unwrap();
 }
 
 async fn get_db() -> Arc<Database> {

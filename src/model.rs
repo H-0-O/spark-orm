@@ -1,14 +1,13 @@
 #![allow(dead_code)]
 
+use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
-use getset::Setters;
 use mongodb::{Collection, Database};
 use mongodb::bson::{doc, Document};
-use mongodb::options::{FindOneOptions, InsertOneOptions};
-use mongodb::results::InsertOneResult;
+use mongodb::options::{FindOneOptions, InsertOneOptions, UpdateOptions};
 use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{Serialize};
 use mongodb::error::Result as MongodbResult;
 use crate::Spark;
 
@@ -27,13 +26,16 @@ use crate::Spark;
 //         }
 //     }
 // }
+type Id = mongodb::bson::Bson;
 
-
-#[derive(Debug)]
-pub struct Model<'a, M> {
+#[derive(Debug , Serialize)]
+pub struct Model<'a, M>
+{
     inner: Box<M>,
+    #[serde(skip)]
     db: Arc<Database>,
     collection_name: &'a str,
+    #[serde(skip)]
     collection: Collection<M>,
 }
 
@@ -55,7 +57,11 @@ impl<'a, M> Model<'a, M>
     where
         M: Default,
         M: Serialize,
-        M: DeserializeOwned
+        M: DeserializeOwned,
+        M: Send,
+        M: Sync,
+        M: Unpin,
+        M: Debug
 {
     /// makes a model and stores the data and collection_name to creating collection object
     /// to store data into it
@@ -80,7 +86,7 @@ impl<'a, M> Model<'a, M>
         if let Some(database) = db {
             let collection = database.collection::<M>(collection_name);
             return Model {
-                inner: Box::new(M::default()),
+                inner: Box::<M>::default(),
                 db: database.clone(),
                 collection_name,
                 collection,
@@ -90,26 +96,47 @@ impl<'a, M> Model<'a, M>
         let database = Spark::get_db();
         let collection = database.collection::<M>(collection_name);
         Model {
-            inner: Box::new(M::default()),
+            inner: Box::<M>::default(),
             db: database,
             collection_name,
             collection,
         }
     }
-    pub async fn save(&self, options: impl Into<Option<InsertOneOptions>>)
-                      -> MongodbResult<InsertOneResult>
+
+    /// saves the change , if the inner has some _id then it's update the existing unless
+    /// it's create  new document 
+    pub async fn save(&mut self, options: impl Into<Option<InsertOneOptions>>)
+                      -> MongodbResult<Id>
     {
-        self.collection.insert_one(
+        let mut converted = mongodb::bson::to_document(&self.inner)?;
+        if let Some(id) = converted.get("_id") {
+            let owned_id = id.to_owned();
+            let upsert = self.collection.update_one(
+                doc! {
+                    "_id" : id
+                },
+                doc! { "$set": converted},
+                Some(
+                    UpdateOptions::builder().upsert(Some(true)).build()
+                ),
+            ).await?;
+            return if upsert.upserted_id.is_some() {
+                Ok(upsert.upserted_id.unwrap())
+            } else {
+                Ok(owned_id)
+            };
+        } else {
+            converted.remove("_id");
+        }
+
+        let re = self.collection.insert_one(
             &*self.inner,
             options,
-        ).await
+        ).await?;
+        Ok(re.inserted_id)
     }
-    pub async fn find_one(mut self, doc: impl Into<Document>, options: impl Into<Option<FindOneOptions>>)
+    pub async fn find_one(mut self, doc: impl Into<Document> , options: impl Into<Option<FindOneOptions>>)
                           -> MongodbResult<Option<Self>>
-        where
-            M: Unpin,
-            M: Send,
-            M: Sync
     {
         let result = self.collection.find_one(
             Some(doc.into()),
@@ -126,22 +153,27 @@ impl<'a, M> Model<'a, M>
         }
     }
 
-    pub async fn update(&self, doc: impl Into<Document>) {
+    pub async fn update(&self, query: impl Into<Document>, doc: impl Into<Document>, options: impl Into<Option<UpdateOptions>>) {
         let converted = mongodb::bson::to_document(&self.inner);
         let id = converted.unwrap().get("_id").unwrap();
         //TODO complete from here 
-        // self.collection.update_one(
-        //     doc! {
-        //         "_id" : id
-        //     },
-        //     doc! {
-        //         
-        //     }
-        // );
+        self.collection.update_one(
+            query.into(),
+            doc.into(),
+            options,
+        ).await.unwrap();
     }
     pub fn fill(&mut self, inner: M) {
         *self.inner = inner;
     }
 }
 
+impl<'a , M> From<Model<'a , M>> for Document
+    where 
+        M: Serialize
+{
+    fn from(value: Model<M>) -> Self {
+        mongodb::bson::to_document(&value).unwrap()
+    }
+}
 
