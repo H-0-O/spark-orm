@@ -3,14 +3,16 @@
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
-use mongodb::{Collection, Cursor, Database};
+use std::time::Duration;
+use mongodb::{Collection, Cursor, Database, IndexModel};
 use mongodb::bson::{doc, Document};
-use mongodb::options::{FindOneOptions, FindOptions, InsertOneOptions, UpdateOptions};
+use mongodb::options::{DropIndexOptions, FindOneOptions, FindOptions, InsertOneOptions, ListIndexesOptions, UpdateOptions};
 use serde::de::DeserializeOwned;
 use serde::{Serialize};
 use mongodb::error::Result as MongodbResult;
 use mongodb::results::UpdateResult;
 use crate::futures::StreamExt;
+use crate::macros::{error, trace};
 use crate::Spark;
 
 // TODO: this must move to types module
@@ -50,7 +52,7 @@ impl<'a, M> Model<'a, M>
         M: Send,
         M: Sync,
         M: Unpin,
-        M: Debug
+        M: Debug,
 {
     /// makes a model and stores the data and collection_name to creating collection object
     /// to store data into it
@@ -209,7 +211,7 @@ impl<'a, M> Model<'a, M>
     }
 
     pub async fn find_and_collect(&self, filter: impl Into<Option<Document>>, options: impl Into<Option<FindOptions>>)
-                               -> MongodbResult<Vec<MongodbResult<M>>>
+                                  -> MongodbResult<Vec<MongodbResult<M>>>
     {
         let future = self.collection.find(
             filter,
@@ -217,6 +219,103 @@ impl<'a, M> Model<'a, M>
         ).await?;
         Ok(future.collect().await)
     }
+
+
+    pub fn register_attributes(self: &Self , attributes: Vec<&str>)
+    {
+        let mut attrs = attributes.iter().map(|attr| attr.to_string()).collect::<Vec<String>>();
+        let max_time_to_drop = Some(Duration::from_secs(5));
+        let (tx, _) = tokio::sync::oneshot::channel();
+        let db = self.db.clone();
+        let coll_name = self.collection_name.to_owned();
+        trace!("Spawn task to register indexes");
+        let register_attrs = async move {
+            let coll = db.collection::<M>(&coll_name);
+            let previous_indexes = coll.list_indexes(
+                Some(
+                    ListIndexesOptions::builder().max_time(
+                        max_time_to_drop
+                    ).build()
+                )
+            ).await;
+            if let Err(error) = previous_indexes {
+                error!(
+                    "Can't unpack the previous_indexes {error}"
+                );
+                return;
+            }
+            let mut keys_to_remove = Vec::new();
+            let foreach_future = previous_indexes.unwrap().for_each(|pr| {
+                match pr {
+                    Ok(index_model) => {
+                        index_model.keys.iter().for_each(|key| {
+                            if key.0 != "_id" {
+                                if let Some(pos) = attrs.iter().position(|k| k == key.0) {
+                                    // means attribute exists in struct and database and not need to create it
+                                    attrs.remove(pos);
+                                } else if let Some(rw) = &index_model.options {
+                                    // means the attribute must remove because not exists in struct
+                                    keys_to_remove.push(
+                                        rw.name.clone()
+                                    )
+                                }
+                            }
+                        });
+                    }
+                    Err(error) => {
+                        error!(
+                            "Can't unpack index model {error}"
+                        );
+                    }
+                }
+                futures::future::ready(())
+            });
+            foreach_future.await;
+        
+            let attrs = attrs.iter()
+                .map(|attr| {
+                    let key = attr.to_string();
+                    IndexModel::builder().keys(
+                        doc! {
+                        key : 1
+                }
+                    ).build()
+                }).collect::<Vec<IndexModel>>();
+        
+            for name in keys_to_remove {
+                let key = name.as_ref().unwrap();
+                let _ = coll.drop_index(key,
+                                        Some(
+                                            DropIndexOptions::builder().max_time(
+                                                max_time_to_drop
+                                            ).build()
+                                        ),
+                ).await;
+            }
+            if !attrs.is_empty() {
+                let result = coll.create_indexes(
+                    attrs,
+                    None,
+                ).await;
+                if let Err(error) = result {
+                    error!(
+                        "Can't create indexes : {:?}" ,
+                        error
+                    );
+                }
+            }
+        };
+        
+        let task = tokio::spawn(register_attrs);
+        
+        let wait_for_complete = async move {
+            let _ = task.await;
+            let _ = tx.send(());
+        };
+        
+        tokio::task::spawn(wait_for_complete);
+    }
+
     pub fn fill(&mut self, inner: M) {
         *self.inner = inner;
     }
