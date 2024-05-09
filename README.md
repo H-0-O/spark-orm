@@ -121,3 +121,4 @@ Define index or unique attributes for struct fields:
 
 These indexes are registered during the first initiation of Product.
 
+#  Note the library is under development and may have lots of changes in the future, event in its basics

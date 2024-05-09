@@ -16,7 +16,6 @@ pub mod futures {
 pub use preload::*;
 pub mod preload {
     pub use spark_orm::error::Error;
-    pub use spark_orm::model::proxy_model::crud::ProxyModelCrud;
     pub use spark_orm::{Model, TModel};
     pub use spark_orm::client::{Result, Spark};
 }

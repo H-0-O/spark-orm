@@ -1,5 +1,6 @@
 use mongodb::bson::{to_document, Document};
 use mongodb::{bson::doc, options::IndexOptions, IndexModel};
+use serde::de::DeserializeOwned;
 use serde::Serialize;
 use crate::client::Result;
 
@@ -25,5 +26,21 @@ pub(crate) fn convert_to_doc<T: Serialize>(model: T) -> Result<Document> {
             Ok(doc)
         }
         Err(error) => Err(Error::new(&error.to_string())),
+    }
+}
+
+pub(crate) fn convert_from_doc<M>(doc: Document) -> Result<M>
+    where
+        M: DeserializeOwned
+{
+    match mongodb::bson::from_bson(doc.into()) {
+        Ok(dow) => {
+            Ok(dow)
+        }
+        Err(fs) => {
+            Err(
+                Error::new(&fs.to_string())
+            )
+        }
     }
 }

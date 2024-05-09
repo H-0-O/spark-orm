@@ -1,4 +1,4 @@
-use crate::model::proxy_model::ProxyModel;
+use crate::model::model::ProxyModel;
 use crate::model::InnerState;
 
 pub trait InnerUtility<T> {

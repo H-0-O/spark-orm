@@ -67,7 +67,7 @@ impl Spark {
     pub fn get_db() -> Arc<Database> {
         let spark = R_M_ORM_STATIC.get();
         match spark {
-            Some(rs) => Arc::clone(&rs.db),
+            Some(rs) => rs.db.clone(),
             None => panic!("The Data base not set !!!"),
         }
     }
@@ -178,7 +178,9 @@ impl Spark {
         tokio::task::spawn(wait_for_complete);
     }
 
-
+    pub fn use_db(){
+        
+    }
     fn init_logger() {
         env_logger::init();
     }

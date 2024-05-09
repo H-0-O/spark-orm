@@ -9,7 +9,7 @@ use crate::utility::GeneratorResult;
 
 const INNER_CRUD_TRAIT_PATH: &str = "spark_orm::model::crud::inner_crud::InnerCRUD";
 
-const PROXY_MODEL_STRUCT_PATH: &str = "spark_orm::model::proxy_model::ProxyModel";
+const PROXY_MODEL_STRUCT_PATH: &str = "spark_orm::model::Model";
 
 pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResult<TokenStream> {
     let ident = &__struct.ident;
@@ -34,7 +34,8 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
         filed_expand = quote!(
             #filed_expand
 
-            updated_at: spark_orm::types::DateTime,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            updated_at: Option<spark_orm::types::DateTime>,
         )
     }
     if !check_filed_exists(__struct, "deleted_at") {
@@ -65,15 +66,18 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
 
     //model creator implement
     let model_creator = generate_model_creator_impl(__struct, model_args);
+
+    let from_to_document_trait = generate_from_to_document_trait(__struct);
     Ok(quote!(
         #struct_attrs
         #visibility struct #ident #impl_generics #where_clause {
            #filed_expand
            #other_field
         }
-
-        #inner_crud_trait
+        
         #model_creator
+
+        #from_to_document_trait
     )
         .into())
 }
@@ -141,6 +145,23 @@ fn generate_defined_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
     other_field
 }
 
+fn generate_from_to_document_trait(__struct: &ItemStruct) -> proc_macro2::TokenStream {
+    let model_name = &__struct.ident;
+    quote!(
+        impl From<#model_name> for mongodb::bson::Document {
+             fn from(value: #model_name) -> Self {
+                mongodb::bson::to_document(&value).unwrap()
+            }
+        }
+
+        impl From<&#model_name> for mongodb::bson::Document {
+             fn from(value: &#model_name) -> Self {
+                mongodb::bson::to_document(&value).unwrap()
+            }
+        }
+    )
+}
+
 fn check_filed_exists(__struct: &ItemStruct, field_name: &str) -> bool {
     __struct
         .fields
@@ -159,20 +180,20 @@ fn generate_inner_crud_trait(__struct: &ItemStruct) -> proc_macro2::TokenStream 
 
 fn generate_model_creator_impl(__struct: &ItemStruct, model_args: &ModelArgs) -> proc_macro2::TokenStream {
     let model_name = &__struct.ident;
-    let proxy_model = syn::Path::from_string(PROXY_MODEL_STRUCT_PATH).unwrap();
+    let model = syn::Path::from_string(PROXY_MODEL_STRUCT_PATH).unwrap();
     let coll_name = &model_args.coll_name;
     let register_attributes_function = generate_register_attribute_function(__struct);
     let (impl_generics, type_generics, where_generics) = __struct.generics.split_for_impl();
     quote! {
            impl #impl_generics #model_name #type_generics #where_generics {
-                pub fn new_model<'a>(db: &'a std::sync::Arc<mongodb::Database>) -> #proxy_model<'a , Self>{
-                    Self::register_attributes(db , #coll_name);
-                    #proxy_model::new(db , #coll_name)
+                pub fn new_model<'a>(db: Option<& std::sync::Arc<mongodb::Database>>) -> #model<'a , Self>{
+                    // Self::register_attributes(db , #coll_name);
+                    #model::new(db , #coll_name)
                 }
 
                 #register_attributes_function
             }
-        }
+    }
 }
 
 /// attr_to_compare must be without # and [] , like serde(default)
@@ -199,7 +220,7 @@ fn generate_register_attribute_function(__struct: &ItemStruct) -> proc_macro2::T
             );
         }
     });
-    
+
     // println!("the indexes {:?}" , indexes.to_string());
     quote!(
         pub fn register_attributes(db: &std::sync::Arc<mongodb::Database> , coll_name: &str){
