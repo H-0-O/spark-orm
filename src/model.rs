@@ -2,7 +2,6 @@
 
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
-use std::process::Output;
 use std::sync::Arc;
 use mongodb::{Collection, Cursor, Database};
 use mongodb::bson::{doc, Document};
