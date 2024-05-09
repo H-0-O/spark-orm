@@ -6,7 +6,6 @@ mod connection;
 pub mod error;
 pub mod model;
 pub mod types;
-pub mod utilities;
 pub mod client;
 mod macros;
 
@@ -16,6 +15,6 @@ pub mod futures {
 pub use preload::*;
 pub mod preload {
     pub use spark_orm::error::Error;
-    pub use spark_orm::{Model, TModel};
+    pub use spark_orm::{Model};
     pub use spark_orm::client::{Result, Spark};
 }

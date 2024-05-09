@@ -7,8 +7,6 @@ use syn::GenericParam;
 use crate::{ModelArgs};
 use crate::utility::GeneratorResult;
 
-const INNER_CRUD_TRAIT_PATH: &str = "spark_orm::model::crud::inner_crud::InnerCRUD";
-
 const PROXY_MODEL_STRUCT_PATH: &str = "spark_orm::model::Model";
 
 pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResult<TokenStream> {
@@ -61,8 +59,6 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
             #attr
         )
     });
-    //Generate traits
-    let inner_crud_trait = generate_inner_crud_trait(__struct);
 
     //model creator implement
     let model_creator = generate_model_creator_impl(__struct, model_args);
@@ -169,14 +165,6 @@ fn check_filed_exists(__struct: &ItemStruct, field_name: &str) -> bool {
         .any(|x| x.ident.as_ref().unwrap().eq(field_name))
 }
 
-fn generate_inner_crud_trait(__struct: &ItemStruct) -> proc_macro2::TokenStream {
-    let model_name = &__struct.ident;
-    let trait_name = syn::Path::from_string(INNER_CRUD_TRAIT_PATH).unwrap();
-    let (impl_generics, type_generics, where_generics) = __struct.generics.split_for_impl();
-    quote! {
-            impl #impl_generics #trait_name for  #model_name #type_generics #where_generics {}
-        }
-}
 
 fn generate_model_creator_impl(__struct: &ItemStruct, model_args: &ModelArgs) -> proc_macro2::TokenStream {
     let model_name = &__struct.ident;
