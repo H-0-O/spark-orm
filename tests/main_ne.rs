@@ -10,6 +10,7 @@ use spark_orm_derive::Model;
 #[Model(coll_name = "users")]
 #[derive(Serialize, Deserialize, Default, Debug)]
 struct User {
+    #[index]
     name: String,
     age: u64,
 }

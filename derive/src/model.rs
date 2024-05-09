@@ -175,8 +175,9 @@ fn generate_model_creator_impl(__struct: &ItemStruct, model_args: &ModelArgs) ->
     quote! {
            impl #impl_generics #model_name #type_generics #where_generics {
                 pub fn new_model<'a>(db: Option<& std::sync::Arc<mongodb::Database>>) -> #model<'a , Self>{
-                    // Self::register_attributes(db , #coll_name);
-                    #model::new(db , #coll_name)
+                    let model = #model::<Self>::new(db , #coll_name);
+                    Self::register_attributes(&model);
+                    model
                 }
 
                 #register_attributes_function
@@ -198,6 +199,8 @@ fn attr_exists(attrs: &[Attribute], attr_to_compare: &str) -> bool {
 fn generate_register_attribute_function(__struct: &ItemStruct) -> proc_macro2::TokenStream {
     let fields = &__struct.fields;
     let mut indexes = quote!();
+    let model = syn::Path::from_string(PROXY_MODEL_STRUCT_PATH).unwrap();
+    
     fields.iter().for_each(|field| {
         if attr_exists(&field.attrs, "index") {
             let ident = field.ident.to_token_stream().to_string();
@@ -211,13 +214,13 @@ fn generate_register_attribute_function(__struct: &ItemStruct) -> proc_macro2::T
 
     // println!("the indexes {:?}" , indexes.to_string());
     quote!(
-        pub fn register_attributes(db: &std::sync::Arc<mongodb::Database> , coll_name: &str){
+        pub fn register_attributes<'a>(model: &#model<'a , Self>){
             let indexes = vec![#indexes];
             static registerer: std::sync::Once = std::sync::Once::new();
             //TODO this must be fix
             
             registerer.call_once( ||{
-                 spark_orm::Spark::register_attributes::<Self>(db.clone() , indexes , coll_name.to_string());
+                model.register_attributes(indexes);
             });
         }
     )
