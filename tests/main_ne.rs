@@ -102,7 +102,7 @@ async fn update_with_model() {
 }
 
 #[tokio::test]
-async fn update_with_model_instance(){
+async fn update_with_model_instance() {
     let db = get_db().await;
     let mut user_model = User::new_model(Some(&db));
     user_model.name = "Hossein 3355".to_string();
@@ -111,13 +111,28 @@ async fn update_with_model_instance(){
         &user_model,
         doc! {
             "$set": {
-                "name": "Hossein 3355"
+                "name": "Hossein 325"
             }
         },
         None,
     ).await.unwrap();
     println!("The Updated info {:?}", updated);
 }
+
+#[tokio::test]
+async fn find_and_collect() {
+    let db = get_db().await;
+    let user_model = User::new_model(Some(&db));
+
+    let users = user_model.find_and_collect(
+        doc! {"name": "Hossein 2"},
+        None,
+    ).await.unwrap();
+    
+    println!("The users {users:?} ")
+}
+
+
 async fn get_db() -> Arc<Database> {
     Spark::global_connect("root", "123", "localhost", "6789", "rm_orm_db").await
 }

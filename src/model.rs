@@ -1,16 +1,17 @@
 #![allow(dead_code)]
 
-use std::borrow::Borrow;
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
+use std::process::Output;
 use std::sync::Arc;
-use mongodb::{Collection, Database};
+use mongodb::{Collection, Cursor, Database};
 use mongodb::bson::{doc, Document};
-use mongodb::options::{FindOneOptions, InsertOneOptions, UpdateOptions};
+use mongodb::options::{FindOneOptions, FindOptions, InsertOneOptions, UpdateOptions};
 use serde::de::DeserializeOwned;
 use serde::{Serialize};
 use mongodb::error::Result as MongodbResult;
 use mongodb::results::UpdateResult;
+use crate::futures::StreamExt;
 use crate::Spark;
 
 // TODO: this must move to types module
@@ -160,16 +161,62 @@ impl<'a, M> Model<'a, M>
     ///     ).await.unwrap(); 
     /// ```
     /// ## with the model 
+    /// let user_model = User::new_model(Some(&db));
+    ///     let mut sample_user = User::default();
+    ///     sample_user.name = "Hossein 33".to_string();
+    ///     let updated = user_model.update(
+    ///         &sample_user,
+    ///        doc! {
+    ///            "$set": {
+    ///                "name": "Hossein 3355"
+    ///            }
+    ///        },
+    ///        None,
+    ///    ).await.unwrap();
+    ///
+    /// ## with_model_instance 
+    ///     let mut user_model = User::new_model(Some(&db));
+    ///    user_model.name = "Hossein 3355".to_string();
+    ///    user_model.age = 58;
+    ///    let updated = user_model.update(
+    ///        &user_model,
+    ///        doc! {
+    ///            "$set": {
+    ///                "name": "Hossein 325"
+    ///            }
+    ///        },
+    ///        None,
+    ///    ).await.unwrap();
+    ///
+    ///
+    ///
     pub async fn update(&self, query: impl Into<Document>, doc: impl Into<Document>, options: impl Into<Option<UpdateOptions>>)
                         -> MongodbResult<UpdateResult>
     {
-        println!("query {:?}" , query.into());
         self.collection.update_one(
-            // query.into(),
-            doc! {},
+            query.into(),
             doc.into(),
             options,
         ).await
+    }
+
+    pub async fn find(&self, filter: impl Into<Option<Document>>, options: impl Into<Option<FindOptions>>)
+                      -> MongodbResult<Cursor<M>>
+    {
+        self.collection.find(
+            filter,
+            options,
+        ).await
+    }
+
+    pub async fn find_and_collect(&self, filter: impl Into<Option<Document>>, options: impl Into<Option<FindOptions>>)
+                               -> MongodbResult<Vec<MongodbResult<M>>>
+    {
+        let future = self.collection.find(
+            filter,
+            options,
+        ).await?;
+        Ok(future.collect().await)
     }
     pub fn fill(&mut self, inner: M) {
         *self.inner = inner;
@@ -178,13 +225,12 @@ impl<'a, M> Model<'a, M>
 
 // converts
 
-//TODO both must be flatten and leave inner from inner item in document
 impl<'a, M> From<Model<'a, M>> for Document
     where
         M: Serialize,
 {
     fn from(value: Model<M>) -> Self {
-        mongodb::bson::to_document(&value).unwrap()
+        mongodb::bson::to_document(&value.inner).unwrap()
     }
 }
 
@@ -193,6 +239,6 @@ impl<'a, M> From<&Model<'a, M>> for Document
         M: Serialize
 {
     fn from(value: &Model<'a, M>) -> Self {
-        mongodb::bson::to_document(value).unwrap()
+        mongodb::bson::to_document(&value.inner).unwrap()
     }
 }
