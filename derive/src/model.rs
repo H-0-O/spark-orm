@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 use darling::{FromMeta};
 
 use quote::{quote, ToTokens};
-use syn::{Attribute, ItemStruct, Type};
+use syn::{Attribute, Generics, ImplGenerics, ItemStruct, Path, Type, TypeGenerics};
 use syn::GenericParam;
 use crate::{ModelArgs};
 use crate::utility::GeneratorResult;
@@ -12,7 +12,7 @@ const PROXY_MODEL_STRUCT_PATH: &str = "spark_orm::model::Model";
 pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResult<TokenStream> {
     let ident = &__struct.ident;
     let visibility = &__struct.vis;
-    let (impl_generics, _ty_generics, where_clause) = __struct.generics.split_for_impl();
+    let (impl_generics, _ty_generics, where_clause) = prepare_generics(&__struct.generics);
     let mut filed_expand = quote!();
     if !check_filed_exists(__struct, "_id") { // check _id exists or not
         filed_expand = quote!(
@@ -74,8 +74,8 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
         #model_creator
 
         #from_to_document_trait
+    ).into()
     )
-        .into())
 }
 
 fn generate_defined_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
@@ -125,7 +125,7 @@ fn generate_defined_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
             }
         });
         let generic_att = if is_generic {
-            let deserialize_string = format!("{} : serde::de::DeserializeOwned", filed_type.to_token_stream().to_string());
+            let deserialize_string = format!("{} : spark_orm::DeserializeOwned", filed_type.to_token_stream().to_string());
             quote!(  #[serde(bound(deserialize = #deserialize_string))] )
             // quote!(    #[serde(bound(deserialize = "T : serde::de::DeserializeOwned"))])
         } else { quote!() };
@@ -143,15 +143,16 @@ fn generate_defined_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
 
 fn generate_from_to_document_trait(__struct: &ItemStruct) -> proc_macro2::TokenStream {
     let model_name = &__struct.ident;
+    let (impl_generics, ty_generics, where_clause) = prepare_generics(&__struct.generics);
     quote!(
-        impl From<#model_name> for mongodb::bson::Document {
-             fn from(value: #model_name) -> Self {
+        impl #impl_generics From<#model_name #ty_generics> for mongodb::bson::Document #where_clause {
+             fn from(value: #model_name #ty_generics) -> Self {
                 mongodb::bson::to_document(&value).unwrap()
             }
         }
 
-        impl From<&#model_name> for mongodb::bson::Document {
-             fn from(value: &#model_name) -> Self {
+        impl #impl_generics From<&#model_name #ty_generics> for mongodb::bson::Document #where_clause{
+             fn from(value: &#model_name #ty_generics) -> Self {
                 mongodb::bson::to_document(&value).unwrap()
             }
         }
@@ -171,9 +172,12 @@ fn generate_model_creator_impl(__struct: &ItemStruct, model_args: &ModelArgs) ->
     let model = syn::Path::from_string(PROXY_MODEL_STRUCT_PATH).unwrap();
     let coll_name = &model_args.coll_name;
     let register_attributes_function = generate_register_attribute_function(__struct);
-    let (impl_generics, type_generics, where_generics) = __struct.generics.split_for_impl();
+    let (impl_generics, type_generics, where_generics) = prepare_generics(&__struct.generics);
     quote! {
-           impl #impl_generics #model_name #type_generics #where_generics {
+           impl #impl_generics #model_name #type_generics
+            #where_generics
+
+            {
                 pub fn new_model<'a>(db: Option<& std::sync::Arc<mongodb::Database>>) -> #model<'a , Self>{
                     let model = #model::<Self>::new(db , #coll_name);
                     Self::register_attributes(&model);
@@ -200,7 +204,7 @@ fn generate_register_attribute_function(__struct: &ItemStruct) -> proc_macro2::T
     let fields = &__struct.fields;
     let mut indexes = quote!();
     let model = syn::Path::from_string(PROXY_MODEL_STRUCT_PATH).unwrap();
-    
+
     fields.iter().for_each(|field| {
         if attr_exists(&field.attrs, "index") {
             let ident = field.ident.to_token_stream().to_string();
@@ -236,4 +240,44 @@ fn is_custom_attribute(attr: &Attribute) -> bool {
     return custom_attributes.iter().any(|c| {
         c == &attr.meta.to_token_stream().to_string()
     });
+}
+
+fn prepare_generics(generics: &Generics) -> (ImplGenerics, TypeGenerics, proc_macro2::TokenStream) {
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    const NEEDED_BOUNDS: [&str; 7] = [
+        "spark_orm::DeserializeOwned",
+        "spark_orm::Serialize",
+        "Debug",
+        "Unpin",
+        "Sync",
+        "Send",
+        "Default"
+    ];
+
+    let mut bounds = if generics.where_clause.is_some() {
+        quote!(
+          #where_clause ,
+
+      )
+    } else {
+        quote!(
+            where
+        )
+    };
+
+
+    generics.params.iter().for_each(|generic| {
+        if let GenericParam::Type(ty) = generic {
+            NEEDED_BOUNDS.iter().for_each(|bound| {
+                let ident = &ty.ident;
+                let bound = Path::from_string(bound).unwrap();
+                bounds = quote!(
+                        #bounds
+
+                        #ident :  #bound ,
+                    );
+            })
+        }
+    });
+    (impl_generics, ty_generics, bounds)
 }

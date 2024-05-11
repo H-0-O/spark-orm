@@ -1,6 +1,7 @@
+use std::fmt::Debug;
 use std::str::FromStr;
 use std::sync::Arc;
-use mongodb::bson::doc;
+use mongodb::bson::{doc};
 use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
 use serde::{Deserialize, Serialize};
@@ -9,29 +10,22 @@ use spark_orm_derive::Model;
 
 #[Model(coll_name = "users")]
 #[derive(Serialize, Deserialize, Default, Debug)]
-struct User {
+struct User
+{
     #[index]
     name: String,
     age: u64,
+    collect: Product
 }
 
 
 //TODO test From trait with struct that has generic
-#[Model(coll_name = "users")]
-#[derive(Serialize, Deserialize, Default, Debug)]
+#[derive(Serialize , Deserialize , Default , Debug)]
 struct Product {
     name: String,
 }
 
-// impl From<Product> for Document{
-//     fn from(value: Product) -> Self {
-//         let result = mongodb::bson::to_document(&value);
-//         match result {
-//             Ok(doc) => doc,
-//             Err(_) => doc! {}
-//         }
-//     }
-// }
+
 
 
 #[tokio::test]

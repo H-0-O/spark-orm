@@ -201,11 +201,11 @@ impl<'a, M> Model<'a, M>
         ).await
     }
 
-    pub async fn find(&self, filter: impl Into<Option<Document>>, options: impl Into<Option<FindOptions>>)
+    pub async fn find(&self, filter: impl Into<Document>, options: impl Into<Option<FindOptions>>)
                       -> MongodbResult<Cursor<M>>
     {
         self.collection.find(
-            filter,
+            Some(filter.into()),
             options,
         ).await
     }

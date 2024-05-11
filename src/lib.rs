@@ -17,4 +17,7 @@ pub mod preload {
     pub use spark_orm::error::Error;
     pub use spark_orm::{Model};
     pub use spark_orm::client::{Result, Spark};
+    pub use serde::Serialize;
+    pub use serde::Deserialize;
+    pub use serde::de::DeserializeOwned;
 }
