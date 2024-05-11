@@ -10,7 +10,7 @@ impl Default for DateTime {
     }
 }
 
-#[cfg(feature = "debug")]
+
 impl std::fmt::Debug for DateTime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.0)
