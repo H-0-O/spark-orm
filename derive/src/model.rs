@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 use darling::{FromMeta};
 
 use quote::{quote, ToTokens};
-use syn::{Attribute, Generics, ImplGenerics, ItemStruct, Path, PredicateType, Token, TraitBound, Type, TypeArray, TypeGenerics, TypeParam, TypeParamBound, WhereClause, WherePredicate};
+use syn::{Attribute, Generics, ImplGenerics, ItemStruct, Path, Type, TypeGenerics};
 use syn::GenericParam;
 use crate::{ModelArgs};
 use crate::utility::GeneratorResult;
@@ -156,7 +156,7 @@ fn generate_from_to_document_trait(__struct: &ItemStruct) -> proc_macro2::TokenS
                 mongodb::bson::to_document(&value).unwrap()
             }
         }
-    );
+    )
 }
 
 fn check_filed_exists(__struct: &ItemStruct, field_name: &str) -> bool {
@@ -242,7 +242,7 @@ fn is_custom_attribute(attr: &Attribute) -> bool {
     });
 }
 
-fn prepare_generics(generics: &Generics) -> (ImplGenerics , TypeGenerics , proc_macro2::TokenStream){
+fn prepare_generics(generics: &Generics) -> (ImplGenerics, TypeGenerics, proc_macro2::TokenStream) {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     const NEEDED_BOUNDS: [&str; 7] = [
         "spark_orm::DeserializeOwned",
@@ -253,19 +253,19 @@ fn prepare_generics(generics: &Generics) -> (ImplGenerics , TypeGenerics , proc_
         "Send",
         "Default"
     ];
-    
+
     let mut bounds = if generics.where_clause.is_some() {
         quote!(
           #where_clause ,
-    
+
       )
     } else {
         quote!(
             where
         )
     };
-    
-    
+
+
     generics.params.iter().for_each(|generic| {
         if let GenericParam::Type(ty) = generic {
             NEEDED_BOUNDS.iter().for_each(|bound| {
@@ -273,11 +273,11 @@ fn prepare_generics(generics: &Generics) -> (ImplGenerics , TypeGenerics , proc_
                 let bound = Path::from_string(bound).unwrap();
                 bounds = quote!(
                         #bounds
-    
+
                         #ident :  #bound ,
                     );
             })
         }
     });
-    (impl_generics , ty_generics , bounds)
+    (impl_generics, ty_generics, bounds)
 }

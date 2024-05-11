@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::str::FromStr;
 use std::sync::Arc;
-use mongodb::bson::{doc, Document};
+use mongodb::bson::{doc};
 use mongodb::bson::oid::ObjectId;
 use mongodb::Database;
 use serde::{Deserialize, Serialize};
