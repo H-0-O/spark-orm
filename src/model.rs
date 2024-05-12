@@ -5,8 +5,8 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::time::Duration;
 use mongodb::{Collection, Cursor, Database, IndexModel};
-use mongodb::bson::{doc, Document};
-use mongodb::options::{DropIndexOptions, FindOneOptions, FindOptions, InsertOneOptions, ListIndexesOptions, UpdateOptions};
+use mongodb::bson::{doc, Document, to_document};
+use mongodb::options::{DeleteOptions, DropIndexOptions, FindOneOptions, FindOptions, InsertOneOptions, ListIndexesOptions, UpdateOptions};
 use serde::de::DeserializeOwned;
 use serde::{Serialize};
 use mongodb::error::Result as MongodbResult;
@@ -221,7 +221,7 @@ impl<'a, M> Model<'a, M>
     }
 
 
-    pub fn register_attributes(self: &Self , attributes: Vec<&str>)
+    pub fn register_attributes(self: &Self, attributes: Vec<&str>)
     {
         let mut attrs = attributes.iter().map(|attr| attr.to_string()).collect::<Vec<String>>();
         let max_time_to_drop = Some(Duration::from_secs(5));
@@ -271,7 +271,7 @@ impl<'a, M> Model<'a, M>
                 futures::future::ready(())
             });
             foreach_future.await;
-        
+
             let attrs = attrs.iter()
                 .map(|attr| {
                     let key = attr.to_string();
@@ -281,7 +281,7 @@ impl<'a, M> Model<'a, M>
                 }
                     ).build()
                 }).collect::<Vec<IndexModel>>();
-        
+
             for name in keys_to_remove {
                 let key = name.as_ref().unwrap();
                 let _ = coll.drop_index(key,
@@ -305,15 +305,24 @@ impl<'a, M> Model<'a, M>
                 }
             }
         };
-        
+
         let task = tokio::spawn(register_attrs);
-        
+
         let wait_for_complete = async move {
             let _ = task.await;
             let _ = tx.send(());
         };
-        
+
         tokio::task::spawn(wait_for_complete);
+    }
+
+    pub async fn delete(&self, options: impl Into<Option<DeleteOptions>>) -> MongodbResult<u64> {
+        let doc = to_document(&*self.inner)?;
+        let re = self.collection.delete_one(
+            doc,
+            options,
+        ).await?.deleted_count;
+        Ok(re)
     }
 
     pub fn fill(&mut self, inner: M) {
@@ -322,13 +331,11 @@ impl<'a, M> Model<'a, M>
 }
 
 
-
-impl <'a , M> Model<'a , M>{
-    pub fn inner_deref(self) -> M{
+impl<'a, M> Model<'a, M> {
+    pub fn inner_deref(self) -> M {
         *self.inner
     }
 }
-
 
 
 // converts
