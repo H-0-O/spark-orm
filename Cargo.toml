@@ -35,5 +35,5 @@ members = [
     "derive",
 ]
 [workspace.dependencies]
-spark-orm-derive = { path = "derive", version = "0.1.0" }
+spark-orm-derive = { path = "derive", version = "0.1.1" }
 
