@@ -316,10 +316,9 @@ impl<'a, M> Model<'a, M>
         tokio::task::spawn(wait_for_complete);
     }
 
-    pub async fn delete(&self, options: impl Into<Option<DeleteOptions>>) -> MongodbResult<u64> {
-        let doc = to_document(&*self.inner)?;
+    pub async fn delete(&self, query : impl Into<Document> , options: impl Into<Option<DeleteOptions>>) -> MongodbResult<u64> {
         let re = self.collection.delete_one(
-            doc,
+            query.into(),
             options,
         ).await?.deleted_count;
         Ok(re)
@@ -331,9 +330,11 @@ impl<'a, M> Model<'a, M>
 }
 
 
-impl<'a, M> Model<'a, M> {
-    pub fn inner_deref(self) -> M {
-        *self.inner
+impl<'a, M> Model<'a, M> 
+where M: Default
+{
+    pub fn take_inner(&mut self) -> M {
+        std::mem::take(&mut *self.inner)
     }
 }
 

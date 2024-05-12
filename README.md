@@ -121,4 +121,5 @@ Define index or unique attributes for struct fields:
 
 These indexes are registered during the first initiation of Product.
 
+### I would greatly appreciate your support on GitHub. Please consider giving me a [star](git@github.com:H-0-O/spark-orm.git) to show your support. Thank you! 
 #  Note the library is under development and may have lots of changes in the future, event in its basics
