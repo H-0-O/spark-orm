@@ -321,6 +321,16 @@ impl<'a, M> Model<'a, M>
     }
 }
 
+
+
+impl <'a , M> Model<'a , M>{
+    pub fn inner_deref(self) -> M{
+        *self.inner
+    }
+}
+
+
+
 // converts
 
 impl<'a, M> From<Model<'a, M>> for Document
