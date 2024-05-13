@@ -210,18 +210,26 @@ impl<'a, M> Model<'a, M>
         ).await
     }
 
-    pub async fn find_and_collect(&self, filter: impl Into<Option<Document>>, options: impl Into<Option<FindOptions>>)
+    pub async fn find_and_collect(&self, filter: impl Into<Document>, options: impl Into<Option<FindOptions>>)
                                   -> MongodbResult<Vec<MongodbResult<M>>>
     {
+        // TODO write this in other functions
+        let converted = filter.into();
+        let doc = if converted.is_empty() {
+            None
+        } else {
+            Some(converted)
+        };
+
         let future = self.collection.find(
-            filter,
+            doc,
             options,
         ).await?;
         Ok(future.collect().await)
     }
 
 
-    pub fn register_attributes(self: &Self, attributes: Vec<&str>)
+    pub fn register_attributes(&self, attributes: Vec<&str>)
     {
         let mut attrs = attributes.iter().map(|attr| attr.to_string()).collect::<Vec<String>>();
         let max_time_to_drop = Some(Duration::from_secs(5));
@@ -316,7 +324,7 @@ impl<'a, M> Model<'a, M>
         tokio::task::spawn(wait_for_complete);
     }
 
-    pub async fn delete(&self, query : impl Into<Document> , options: impl Into<Option<DeleteOptions>>) -> MongodbResult<u64> {
+    pub async fn delete(&self, query: impl Into<Document>, options: impl Into<Option<DeleteOptions>>) -> MongodbResult<u64> {
         let re = self.collection.delete_one(
             query.into(),
             options,
@@ -330,8 +338,8 @@ impl<'a, M> Model<'a, M>
 }
 
 
-impl<'a, M> Model<'a, M> 
-where M: Default
+impl<'a, M> Model<'a, M>
+    where M: Default
 {
     pub fn take_inner(&mut self) -> M {
         std::mem::take(&mut *self.inner)
