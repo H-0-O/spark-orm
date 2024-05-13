@@ -48,9 +48,7 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
     // this generates the fields of struct that developer defined
     let other_field = generate_defined_filed(__struct);
 
-    //TODO coll_name must be get from user
-    //TODO generic types must be annotated with the seder( (deserialize_with = "T::deserialize") or (bound(deserialize = "T: DeserializeOwned" ) )
-    //TODO all developer attribute must forwarded here
+    // this section forward developers attrs to here
     let mut struct_attrs = quote!();
     __struct.attrs.iter().for_each(|attr| {
         struct_attrs = quote!(
@@ -98,6 +96,7 @@ fn generate_defined_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
     let mut other_field = quote!();
     __struct.fields.iter().for_each(|field| {
         let ident = field.ident.as_ref().unwrap();
+        let vis = &field.vis;
         let filed_type = &field.ty;
         let is_generic = is_generic(filed_type);
 
@@ -134,7 +133,7 @@ fn generate_defined_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
 
             #attrs
             #generic_att
-            #ident : #filed_type ,
+            #vis #ident : #filed_type ,
         );
     });
 
