@@ -126,18 +126,20 @@ impl<'a, M> Model<'a, M>
         ).await?;
         Ok(re.inserted_id)
     }
-    pub async fn find_one(mut self, doc: impl Into<Document>, options: impl Into<Option<FindOneOptions>>)
-                          -> MongodbResult<Option<Self>>
+    pub async fn find_one(&mut self, doc: impl Into<Document>, options: impl Into<Option<FindOneOptions>>)
+                          -> MongodbResult<Option<&mut Self>>
     {
         let result = self.collection.find_one(
             Some(doc.into()),
             options,
         ).await?;
         match result {
-            Some(inner) => {
+            Some(inner) => { 
                 self.fill(inner);
                 Ok(
-                    Some(self)
+                    Some(
+                        self
+                    )
                 )
             }
             None => Ok(None)
@@ -339,10 +341,15 @@ impl<'a, M> Model<'a, M>
 
 
 impl<'a, M> Model<'a, M>
-    where M: Default
+    where M: Default,
+          M: Serialize
 {
     pub fn take_inner(&mut self) -> M {
         std::mem::take(&mut *self.inner)
+    }
+
+    pub fn inner_to_doc(&self) -> Document {
+        to_document(&self.inner).unwrap()
     }
 }
 
@@ -363,6 +370,15 @@ impl<'a, M> From<&Model<'a, M>> for Document
         M: Serialize
 {
     fn from(value: &Model<'a, M>) -> Self {
+        mongodb::bson::to_document(&value.inner).unwrap()
+    }
+}
+
+impl<'a, M> From<&mut Model<'a, M>> for Document
+    where
+        M: Serialize
+{
+    fn from(value: &mut Model<'a, M>) -> Self {
         mongodb::bson::to_document(&value.inner).unwrap()
     }
 }

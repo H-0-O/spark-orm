@@ -17,7 +17,7 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
     if !check_filed_exists(__struct, "_id") { // check _id exists or not
         filed_expand = quote!(
             #[serde(skip_serializing_if = "Option::is_none")]
-            _id: Option<mongodb::bson::oid::ObjectId>,
+            pub _id: Option<mongodb::bson::oid::ObjectId>,
         )
     }
     if !check_filed_exists(__struct, "created_at") {
@@ -25,7 +25,7 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
             #filed_expand
 
             #[serde(skip_serializing_if = "Option::is_none")]
-            created_at: Option<spark_orm::types::DateTime>,
+            pub created_at: Option<spark_orm::types::DateTime>,
         )
     }
     if !check_filed_exists(__struct, "updated_at") {
@@ -33,7 +33,7 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
             #filed_expand
 
             #[serde(skip_serializing_if = "Option::is_none")]
-            updated_at: Option<spark_orm::types::DateTime>,
+            pub updated_at: Option<spark_orm::types::DateTime>,
         )
     }
     if !check_filed_exists(__struct, "deleted_at") {
@@ -41,7 +41,7 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
             #filed_expand
 
             #[serde(skip_serializing_if = "Option::is_none")]
-            deleted_at: Option<spark_orm::types::DateTime>,
+            pub deleted_at: Option<spark_orm::types::DateTime>,
         )
     }
 
