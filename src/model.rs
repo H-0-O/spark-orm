@@ -134,7 +134,7 @@ impl<'a, M> Model<'a, M>
             options,
         ).await?;
         match result {
-            Some(inner) => { 
+            Some(inner) => {
                 self.fill(inner);
                 Ok(
                     Some(
@@ -248,47 +248,44 @@ impl<'a, M> Model<'a, M>
                     ).build()
                 )
             ).await;
-            if let Err(error) = previous_indexes {
-                error!(
-                    "Can't unpack the previous_indexes {error}"
-                );
-                return;
-            }
-            let mut keys_to_remove = Vec::new();
-            let foreach_future = previous_indexes.unwrap().for_each(|pr| {
-                match pr {
-                    Ok(index_model) => {
-                        index_model.keys.iter().for_each(|key| {
-                            if key.0 != "_id" {
-                                if let Some(pos) = attrs.iter().position(|k| k == key.0) {
-                                    // means attribute exists in struct and database and not need to create it
-                                    attrs.remove(pos);
-                                } else if let Some(rw) = &index_model.options {
-                                    // means the attribute must remove because not exists in struct
-                                    keys_to_remove.push(
-                                        rw.name.clone()
-                                    )
-                                }
-                            }
-                        });
-                    }
-                    Err(error) => {
-                        error!(
-                            "Can't unpack index model {error}"
-                        );
-                    }
-                }
-                futures::future::ready(())
-            });
-            foreach_future.await;
 
+            let mut keys_to_remove = Vec::new();
+
+            if previous_indexes.is_ok() {
+                let foreach_future = previous_indexes.unwrap().for_each(|pr| {
+                    match pr {
+                        Ok(index_model) => {
+                            index_model.keys.iter().for_each(|key| {
+                                if key.0 != "_id" {
+                                    if let Some(pos) = attrs.iter().position(|k| k == key.0) {
+                                        // means attribute exists in struct and database and not need to create it
+                                        attrs.remove(pos);
+                                    } else if let Some(rw) = &index_model.options {
+                                        // means the attribute must remove because not exists in struct
+                                        keys_to_remove.push(
+                                            rw.name.clone()
+                                        )
+                                    }
+                                }
+                            });
+                        }
+                        Err(error) => {
+                            error!(
+                                "Can't unpack index model {error}"
+                            );
+                        }
+                    }
+                    futures::future::ready(())
+                });
+                foreach_future.await;
+            }
             let attrs = attrs.iter()
                 .map(|attr| {
                     let key = attr.to_string();
                     IndexModel::builder().keys(
                         doc! {
-                        key : 1
-                }
+                                key : 1
+                            }
                     ).build()
                 }).collect::<Vec<IndexModel>>();
 
@@ -309,9 +306,9 @@ impl<'a, M> Model<'a, M>
                 ).await;
                 if let Err(error) = result {
                     error!(
-                        "Can't create indexes : {:?}" ,
-                        error
-                    );
+                            "Can't create indexes : {:?}" ,
+                            error
+                        );
                 }
             }
         };
