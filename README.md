@@ -65,13 +65,14 @@ Find a model:
 
 
 ```rust
-       let mut user = User::new_model(&db);
-       let sample = doc! {
-            "name" : "Hossein",
-            "email" : "spark_orm_test"
-       };
-       user.find_one(Prototype::Doc(sample)).await.unwrap().unwrap();
-       println!("{}" , user.name);
+        let mut user_model = User::new_model(Some(&db)); 
+        let mut sample = User::default ();
+        sample.name = "Hossein".to_string();
+        let founded = user_model.find_one(
+            sample,
+            None,
+            ).await.unwrap();
+        println!("The founded object {:?} ", founded);
 ```
 
 ---
@@ -88,9 +89,27 @@ Update and save:
 
     user.name = "Nothing".to_string();
 
-    user.update().await;
+    user.save().await;
 ```
 
+### or
+
+```rust
+      let db = get_db().await;
+      let user_model = User::new_model(Some(&db));
+      let updated = user_model.update(
+      doc! {
+                  "name": "Hossein",
+              },
+      doc! {
+                  "$set": {
+                      "name": "Hossein 33"
+                  }
+              },
+      None,
+      ).await.unwrap();
+       println!("The Updated info {:?}", updated);
+```
 --- 
 Delete a record:
 
