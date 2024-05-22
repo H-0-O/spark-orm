@@ -5,8 +5,8 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::time::Duration;
 use mongodb::{Collection, Cursor, Database, IndexModel};
-use mongodb::bson::{doc, Document};
-use mongodb::options::{DropIndexOptions, FindOneOptions, FindOptions, InsertOneOptions, ListIndexesOptions, UpdateOptions};
+use mongodb::bson::{doc, Document, to_document};
+use mongodb::options::{DeleteOptions, DropIndexOptions, FindOneOptions, FindOptions, InsertOneOptions, ListIndexesOptions, UpdateOptions};
 use serde::de::DeserializeOwned;
 use serde::{Serialize};
 use mongodb::error::Result as MongodbResult;
@@ -126,8 +126,8 @@ impl<'a, M> Model<'a, M>
         ).await?;
         Ok(re.inserted_id)
     }
-    pub async fn find_one(mut self, doc: impl Into<Document>, options: impl Into<Option<FindOneOptions>>)
-                          -> MongodbResult<Option<Self>>
+    pub async fn find_one(&mut self, doc: impl Into<Document>, options: impl Into<Option<FindOneOptions>>)
+                          -> MongodbResult<Option<&mut Self>>
     {
         let result = self.collection.find_one(
             Some(doc.into()),
@@ -137,7 +137,9 @@ impl<'a, M> Model<'a, M>
             Some(inner) => {
                 self.fill(inner);
                 Ok(
-                    Some(self)
+                    Some(
+                        self
+                    )
                 )
             }
             None => Ok(None)
@@ -210,18 +212,26 @@ impl<'a, M> Model<'a, M>
         ).await
     }
 
-    pub async fn find_and_collect(&self, filter: impl Into<Option<Document>>, options: impl Into<Option<FindOptions>>)
+    pub async fn find_and_collect(&self, filter: impl Into<Document>, options: impl Into<Option<FindOptions>>)
                                   -> MongodbResult<Vec<MongodbResult<M>>>
     {
+        // TODO write this in other functions
+        let converted = filter.into();
+        let doc = if converted.is_empty() {
+            None
+        } else {
+            Some(converted)
+        };
+
         let future = self.collection.find(
-            filter,
+            doc,
             options,
         ).await?;
         Ok(future.collect().await)
     }
 
 
-    pub fn register_attributes(self: &Self , attributes: Vec<&str>)
+    pub fn register_attributes(&self, attributes: Vec<&str>)
     {
         let mut attrs = attributes.iter().map(|attr| attr.to_string()).collect::<Vec<String>>();
         let max_time_to_drop = Some(Duration::from_secs(5));
@@ -238,50 +248,47 @@ impl<'a, M> Model<'a, M>
                     ).build()
                 )
             ).await;
-            if let Err(error) = previous_indexes {
-                error!(
-                    "Can't unpack the previous_indexes {error}"
-                );
-                return;
-            }
+
             let mut keys_to_remove = Vec::new();
-            let foreach_future = previous_indexes.unwrap().for_each(|pr| {
-                match pr {
-                    Ok(index_model) => {
-                        index_model.keys.iter().for_each(|key| {
-                            if key.0 != "_id" {
-                                if let Some(pos) = attrs.iter().position(|k| k == key.0) {
-                                    // means attribute exists in struct and database and not need to create it
-                                    attrs.remove(pos);
-                                } else if let Some(rw) = &index_model.options {
-                                    // means the attribute must remove because not exists in struct
-                                    keys_to_remove.push(
-                                        rw.name.clone()
-                                    )
+
+            if previous_indexes.is_ok() {
+                let foreach_future = previous_indexes.unwrap().for_each(|pr| {
+                    match pr {
+                        Ok(index_model) => {
+                            index_model.keys.iter().for_each(|key| {
+                                if key.0 != "_id" {
+                                    if let Some(pos) = attrs.iter().position(|k| k == key.0) {
+                                        // means attribute exists in struct and database and not need to create it
+                                        attrs.remove(pos);
+                                    } else if let Some(rw) = &index_model.options {
+                                        // means the attribute must remove because not exists in struct
+                                        keys_to_remove.push(
+                                            rw.name.clone()
+                                        )
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
+                        Err(error) => {
+                            error!(
+                                "Can't unpack index model {error}"
+                            );
+                        }
                     }
-                    Err(error) => {
-                        error!(
-                            "Can't unpack index model {error}"
-                        );
-                    }
-                }
-                futures::future::ready(())
-            });
-            foreach_future.await;
-        
+                    futures::future::ready(())
+                });
+                foreach_future.await;
+            }
             let attrs = attrs.iter()
                 .map(|attr| {
                     let key = attr.to_string();
                     IndexModel::builder().keys(
                         doc! {
-                        key : 1
-                }
+                                key : 1
+                            }
                     ).build()
                 }).collect::<Vec<IndexModel>>();
-        
+
             for name in keys_to_remove {
                 let key = name.as_ref().unwrap();
                 let _ = coll.drop_index(key,
@@ -299,27 +306,50 @@ impl<'a, M> Model<'a, M>
                 ).await;
                 if let Err(error) = result {
                     error!(
-                        "Can't create indexes : {:?}" ,
-                        error
-                    );
+                            "Can't create indexes : {:?}" ,
+                            error
+                        );
                 }
             }
         };
-        
+
         let task = tokio::spawn(register_attrs);
-        
+
         let wait_for_complete = async move {
             let _ = task.await;
             let _ = tx.send(());
         };
-        
+
         tokio::task::spawn(wait_for_complete);
+    }
+
+    pub async fn delete(&self, query: impl Into<Document>, options: impl Into<Option<DeleteOptions>>) -> MongodbResult<u64> {
+        let re = self.collection.delete_one(
+            query.into(),
+            options,
+        ).await?.deleted_count;
+        Ok(re)
     }
 
     pub fn fill(&mut self, inner: M) {
         *self.inner = inner;
     }
 }
+
+
+impl<'a, M> Model<'a, M>
+    where M: Default,
+          M: Serialize
+{
+    pub fn take_inner(&mut self) -> M {
+        std::mem::take(&mut *self.inner)
+    }
+
+    pub fn inner_to_doc(&self) -> Document {
+        to_document(&self.inner).unwrap()
+    }
+}
+
 
 // converts
 
@@ -337,6 +367,15 @@ impl<'a, M> From<&Model<'a, M>> for Document
         M: Serialize
 {
     fn from(value: &Model<'a, M>) -> Self {
+        mongodb::bson::to_document(&value.inner).unwrap()
+    }
+}
+
+impl<'a, M> From<&mut Model<'a, M>> for Document
+    where
+        M: Serialize
+{
+    fn from(value: &mut Model<'a, M>) -> Self {
         mongodb::bson::to_document(&value.inner).unwrap()
     }
 }

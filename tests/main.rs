@@ -39,7 +39,7 @@ async fn save() {
 #[tokio::test]
 async fn find_one() {
     let db = get_db().await;
-    let user_model = User::new_model(Some(&db));
+    let mut user_model = User::new_model(Some(&db));
     let mut sample = User::default();
     sample.name = "Hossein".to_string();
     let founded = user_model.find_one(
@@ -127,6 +127,9 @@ async fn find_and_collect() {
     println!("The users {users:?} ")
 }
 
+async fn borrow_inner(){
+    todo!()   
+}
 
 async fn get_db() -> Arc<Database> {
     Spark::global_connect("root", "123", "localhost", "6789", "rm_orm_db").await
