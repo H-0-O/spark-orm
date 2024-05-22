@@ -39,7 +39,7 @@ async fn save() {
 #[tokio::test]
 async fn find_one() {
     let db = get_db().await;
-    let user_model = User::new_model(Some(&db));
+    let mut user_model = User::new_model(Some(&db));
     let mut sample = User::default();
     sample.name = "Hossein".to_string();
     let founded = user_model.find_one(
