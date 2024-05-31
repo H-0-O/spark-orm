@@ -8,12 +8,16 @@ use crate::{ModelArgs};
 use crate::utility::GeneratorResult;
 
 const PROXY_MODEL_STRUCT_PATH: &str = "spark_orm::model::Model";
+const MODEL_DT_TRAIT: &str = "spark_orm::model::util::ModelTimestamps";
 
 pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResult<TokenStream> {
     let ident = &__struct.ident;
     let visibility = &__struct.vis;
     let (impl_generics, _ty_generics, where_clause) = prepare_generics(&__struct.generics);
     let mut filed_expand = quote!();
+
+    let mut time_creator = vec![];
+
     if !check_filed_exists(__struct, "_id") { // check _id exists or not
         filed_expand = quote!(
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -21,27 +25,33 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
         )
     }
     if !check_filed_exists(__struct, "created_at") {
+        time_creator.push("created_at");
         filed_expand = quote!(
             #filed_expand
 
+            #[serde(default = "Option::default")]
             #[serde(skip_serializing_if = "Option::is_none")]
-            pub created_at: Option<spark_orm::types::DateTime>,
+            pub created_at: Option<mongodb::bson::DateTime>,
         )
     }
     if !check_filed_exists(__struct, "updated_at") {
+        time_creator.push("updated_at");
         filed_expand = quote!(
             #filed_expand
 
+            #[serde(default = "Option::default")]
             #[serde(skip_serializing_if = "Option::is_none")]
-            pub updated_at: Option<spark_orm::types::DateTime>,
+            pub updated_at: Option<mongodb::bson::DateTime>,
         )
     }
     if !check_filed_exists(__struct, "deleted_at") {
+        time_creator.push("deleted_at");
         filed_expand = quote!(
             #filed_expand
 
+            #[serde(default = "Option::default")]
             #[serde(skip_serializing_if = "Option::is_none")]
-            pub deleted_at: Option<spark_orm::types::DateTime>,
+            pub deleted_at: Option<mongodb::bson::DateTime>,
         )
     }
 
@@ -62,6 +72,9 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
     let model_creator = generate_model_creator_impl(__struct, model_args);
 
     let from_to_document_trait = generate_from_to_document_trait(__struct);
+
+    let date_time_functions = generate_date_times_functions(__struct, time_creator);
+
     Ok(quote!(
         #struct_attrs
         #visibility struct #ident #impl_generics #where_clause {
@@ -72,6 +85,9 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
         #model_creator
 
         #from_to_document_trait
+        
+        #date_time_functions
+        
     ).into()
     )
 }
@@ -186,6 +202,44 @@ fn generate_model_creator_impl(__struct: &ItemStruct, model_args: &ModelArgs) ->
                 #register_attributes_function
             }
     }
+}
+
+fn generate_date_times_functions(__struct: &ItemStruct, exists_fields: Vec<&str>) -> proc_macro2::TokenStream {
+    let model_name = &__struct.ident;
+    let (impl_generics, type_generics, where_generics) = prepare_generics(&__struct.generics);
+    let tr = syn::Path::from_string(MODEL_DT_TRAIT).unwrap();
+    let mut qu = quote!();
+    
+    if exists_fields.iter().any(|x| *x == "created_at") {
+        qu = quote! {
+                fn created_at(&mut self){
+                    self.created_at = Some(mongodb::bson::DateTime::now());
+                }   
+        };
+    }
+
+    if exists_fields.iter().any(|x| *x == "deleted_at") {
+        qu = quote! {
+              #qu
+            
+                fn updated_at(&mut self){
+                    self.updated_at = Some(mongodb::bson::DateTime::now());
+                }
+        };
+    }
+    if exists_fields.iter().any(|x| *x == "deleted_at") {
+        qu = quote! {
+            #qu
+            fn deleted_at(&mut self){
+                self.deleted_at = Some(mongodb::bson::DateTime::now());
+            }
+        };
+    }
+    quote!(
+        impl #impl_generics #tr for #model_name #type_generics #where_generics {   
+            #qu  
+        }
+    )
 }
 
 /// attr_to_compare must be without # and [] , like serde(default)
