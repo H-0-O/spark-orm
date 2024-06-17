@@ -343,8 +343,18 @@ impl<'a, M> Model<'a, M>
     where M: Default,
           M: Serialize
 {
+    /// this method takes the inner and gives you ownership of inner then
+    /// replace it with default value
     pub fn take_inner(&mut self) -> M {
         std::mem::take(&mut *self.inner)
+    }
+
+    pub fn inner_ref(&self) -> &M{
+        self.inner.as_ref()
+    }
+
+    pub fn inner_mut(&mut self)-> &mut M {
+        self.inner.as_mut()
     }
 
     pub fn inner_to_doc(&self) -> MongodbResult<Document> {

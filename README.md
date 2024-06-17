@@ -43,8 +43,17 @@ Spark-ORM is a high-performance, open-source Object-Relational Mapping (ORM) lib
 Instantiate the model:
 
 ```rust
-    let mut user = User::new_model(&db);
+    let mut user = User::new_model(Some(&db));
 ```
+OR  you can use the global connection :
+
+```rust
+ let mut user = User::new_model(None);
+```
+if you didn't set global connection , the new_model function will panic 
+
+----------------------
+
 Update attributes:
 
 ```rust
@@ -81,7 +90,7 @@ Update and save:
 
 
 ```rust
-    let mut user = User::new_model(&db);
+    let mut user = User::new_model(Some(&db));
     user.name = "Hossein".to_string();
     user.email = "spark_orm_test".to_string();
 
@@ -115,9 +124,16 @@ Delete a record:
 
 
 ```rust
-        let mut user = User::new_model(&db);
+        let mut user = User::new_model(Some(&db));
         user.delete().await;
 ```
+
+Note: you can use the ``?`` instead of unwrap 
+
+## Model
+
+ The model trait adds _id , timestamps (created_at , updated_at , deleted_at) to your struct and fill automatically
+
 
 ## Attributes
 
@@ -141,4 +157,4 @@ Define index or unique attributes for struct fields:
 These indexes are registered during the first initiation of Product.
 
 ### I would greatly appreciate your support on GitHub. Please consider giving me a [star](https://github.com/H-0-O/spark-orm.git) to show your support. Thank you! 
-#  Note the library is under development and may have lots of changes in the future, event in its basics
+#  Note the library is under development and may have lots of changes in the future, even in its basics
