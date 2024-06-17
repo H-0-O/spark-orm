@@ -1,5 +1,8 @@
 #![allow(dead_code)]
 
+pub mod util;
+
+
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
@@ -13,6 +16,7 @@ use mongodb::error::Result as MongodbResult;
 use mongodb::results::UpdateResult;
 use crate::futures::StreamExt;
 use crate::macros::{error, trace};
+use crate::model::util::ModelTimestamps;
 use crate::Spark;
 
 // TODO: this must move to types module
@@ -53,6 +57,7 @@ impl<'a, M> Model<'a, M>
         M: Sync,
         M: Unpin,
         M: Debug,
+        M: ModelTimestamps
 {
     /// makes a model and stores the data and collection_name to creating collection object
     /// to store data into it
@@ -99,26 +104,23 @@ impl<'a, M> Model<'a, M>
     pub async fn save(&mut self, options: impl Into<Option<InsertOneOptions>>)
                       -> MongodbResult<Id>
     {
-        let mut converted = mongodb::bson::to_document(&self.inner)?;
+        self.inner.updated_at();
+        let mut converted = to_document(&self.inner)?;
         if let Some(id) = converted.get("_id") {
             let owned_id = id.to_owned();
             let upsert = self.collection.update_one(
                 doc! {
                     "_id" : id
                 },
-                doc! { "$set": converted},
-                Some(
-                    UpdateOptions::builder().upsert(Some(true)).build()
-                ),
+                doc! { "$set": &converted},
+                None
             ).await?;
-            return if upsert.upserted_id.is_some() {
-                Ok(upsert.upserted_id.unwrap())
-            } else {
-                Ok(owned_id)
+             if upsert.modified_count >= 1 {
+                return Ok(owned_id)
             };
-        } else {
-            converted.remove("_id");
         }
+        converted.remove("_id");
+        self.inner.created_at();
 
         let re = self.collection.insert_one(
             &*self.inner,
@@ -341,12 +343,23 @@ impl<'a, M> Model<'a, M>
     where M: Default,
           M: Serialize
 {
+    /// this method takes the inner and gives you ownership of inner then
+    /// replace it with default value
     pub fn take_inner(&mut self) -> M {
         std::mem::take(&mut *self.inner)
     }
 
-    pub fn inner_to_doc(&self) -> Document {
-        to_document(&self.inner).unwrap()
+    pub fn inner_ref(&self) -> &M{
+        self.inner.as_ref()
+    }
+
+    pub fn inner_mut(&mut self)-> &mut M {
+        self.inner.as_mut()
+    }
+
+    pub fn inner_to_doc(&self) -> MongodbResult<Document> {
+        let re = to_document(&self.inner)?;
+        Ok(re)
     }
 }
 

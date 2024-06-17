@@ -131,6 +131,7 @@ async fn borrow_inner(){
     todo!()   
 }
 
-async fn get_db() -> Arc<Database> {
+async fn get_db() -> Arc<Database> 
+{
     Spark::global_connect("root", "123", "localhost", "6789", "rm_orm_db").await
 }

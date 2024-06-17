@@ -43,8 +43,17 @@ Spark-ORM is a high-performance, open-source Object-Relational Mapping (ORM) lib
 Instantiate the model:
 
 ```rust
-    let mut user = User::new_model(&db);
+    let mut user = User::new_model(Some(&db));
 ```
+OR  you can use the global connection :
+
+```rust
+ let mut user = User::new_model(None);
+```
+if you didn't set global connection , the new_model function will panic 
+
+----------------------
+
 Update attributes:
 
 ```rust
@@ -65,13 +74,14 @@ Find a model:
 
 
 ```rust
-       let mut user = User::new_model(&db);
-       let sample = doc! {
-            "name" : "Hossein",
-            "email" : "spark_orm_test"
-       };
-       user.find_one(Prototype::Doc(sample)).await.unwrap().unwrap();
-       println!("{}" , user.name);
+        let mut user_model = User::new_model(Some(&db)); 
+        let mut sample = User::default ();
+        sample.name = "Hossein".to_string();
+        let founded = user_model.find_one(
+            sample,
+            None,
+            ).await.unwrap();
+        println!("The founded object {:?} ", founded);
 ```
 
 ---
@@ -80,7 +90,7 @@ Update and save:
 
 
 ```rust
-    let mut user = User::new_model(&db);
+    let mut user = User::new_model(Some(&db));
     user.name = "Hossein".to_string();
     user.email = "spark_orm_test".to_string();
 
@@ -88,17 +98,42 @@ Update and save:
 
     user.name = "Nothing".to_string();
 
-    user.update().await;
+    user.save().await;
 ```
 
+### or
+
+```rust
+      let db = get_db().await;
+      let user_model = User::new_model(Some(&db));
+      let updated = user_model.update(
+      doc! {
+                  "name": "Hossein",
+              },
+      doc! {
+                  "$set": {
+                      "name": "Hossein 33"
+                  }
+              },
+      None,
+      ).await.unwrap();
+       println!("The Updated info {:?}", updated);
+```
 --- 
 Delete a record:
 
 
 ```rust
-        let mut user = User::new_model(&db);
+        let mut user = User::new_model(Some(&db));
         user.delete().await;
 ```
+
+Note: you can use the ``?`` instead of unwrap 
+
+## Model
+
+ The model trait adds _id , timestamps (created_at , updated_at , deleted_at) to your struct and fill automatically
+
 
 ## Attributes
 
@@ -121,5 +156,5 @@ Define index or unique attributes for struct fields:
 
 These indexes are registered during the first initiation of Product.
 
-### I would greatly appreciate your support on GitHub. Please consider giving me a [star](git@github.com:H-0-O/spark-orm.git) to show your support. Thank you! 
-#  Note the library is under development and may have lots of changes in the future, event in its basics
+### I would greatly appreciate your support on GitHub. Please consider giving me a [star](https://github.com/H-0-O/spark-orm.git) to show your support. Thank you! 
+#  Note the library is under development and may have lots of changes in the future, even in its basics
