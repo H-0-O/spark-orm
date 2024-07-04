@@ -14,10 +14,52 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
     let ident = &__struct.ident;
     let visibility = &__struct.vis;
     let (impl_generics, _ty_generics, where_clause) = prepare_generics(&__struct.generics);
-    let mut filed_expand = quote!();
 
+
+
+    // this section forward developers attrs to here
+    let struct_attrs = extract_struct_attrs(__struct);
+
+
+
+    // this generates the fields of struct that developer defined
+    let other_field = regenerate_defined_filed(__struct);
+
+    //model creator implement
+    let model_creator = generate_model_creator_impl(__struct, model_args);
+
+    let from_to_document_trait = generate_from_to_document_trait(__struct);
+
+    // this there lines first inspect that the user defined timestamp or not then create fields
+    // for them and after that defines the update method for them
     let mut time_creator = vec![];
+    let filed_expand = generate_time_stamps(__struct, &mut time_creator);
+    let date_time_functions = generate_date_times_functions(__struct, time_creator);
 
+    Ok(
+        quote!(
+            #struct_attrs
+            #visibility struct #ident #impl_generics #where_clause {
+               #filed_expand
+               #other_field
+            }
+
+            #model_creator
+
+            #from_to_document_trait
+
+            #date_time_functions
+        
+        ).into()
+    )
+}
+
+/// this function first checks that user defined create_at or ...
+/// then generates them if it isn't exist
+fn generate_time_stamps(__struct: &ItemStruct, time_creator: &mut Vec<&str>)
+                        -> proc_macro2::TokenStream {
+
+    let mut filed_expand = quote!();
     if !check_filed_exists(__struct, "_id") { // check _id exists or not
         filed_expand = quote!(
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -55,10 +97,11 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
         )
     }
 
-    // this generates the fields of struct that developer defined
-    let other_field = generate_defined_filed(__struct);
+    filed_expand
+}
 
-    // this section forward developers attrs to here
+/// this function extracts user defined attributes for his struct
+fn extract_struct_attrs(__struct: &ItemStruct) -> proc_macro2::TokenStream {
     let mut struct_attrs = quote!();
     __struct.attrs.iter().for_each(|attr| {
         struct_attrs = quote!(
@@ -67,32 +110,12 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
             #attr
         )
     });
-
-    //model creator implement
-    let model_creator = generate_model_creator_impl(__struct, model_args);
-
-    let from_to_document_trait = generate_from_to_document_trait(__struct);
-
-    let date_time_functions = generate_date_times_functions(__struct, time_creator);
-
-    Ok(quote!(
-        #struct_attrs
-        #visibility struct #ident #impl_generics #where_clause {
-           #filed_expand
-           #other_field
-        }
-        
-        #model_creator
-
-        #from_to_document_trait
-        
-        #date_time_functions
-        
-    ).into()
-    )
+    struct_attrs
 }
 
-fn generate_defined_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
+/// this function regenerates the user fields , all fields that user defined regenerate with their
+/// attrs
+fn regenerate_defined_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
     let gen = &__struct.generics.params;
 
     let mut gens = vec![];
@@ -156,6 +179,8 @@ fn generate_defined_filed(__struct: &ItemStruct) -> proc_macro2::TokenStream {
     other_field
 }
 
+
+/// this function generates From trait for document and Model
 fn generate_from_to_document_trait(__struct: &ItemStruct) -> proc_macro2::TokenStream {
     let model_name = &__struct.ident;
     let (impl_generics, ty_generics, where_clause) = prepare_generics(&__struct.generics);
@@ -174,6 +199,7 @@ fn generate_from_to_document_trait(__struct: &ItemStruct) -> proc_macro2::TokenS
     )
 }
 
+/// this function is just simple check that field exists on user defined struct or not
 fn check_filed_exists(__struct: &ItemStruct, field_name: &str) -> bool {
     __struct
         .fields
@@ -182,9 +208,10 @@ fn check_filed_exists(__struct: &ItemStruct, field_name: &str) -> bool {
 }
 
 
+/// this function generates now_model function to create  new instance of Model with user defined struct as inner
 fn generate_model_creator_impl(__struct: &ItemStruct, model_args: &ModelArgs) -> proc_macro2::TokenStream {
     let model_name = &__struct.ident;
-    let model = syn::Path::from_string(PROXY_MODEL_STRUCT_PATH).unwrap();
+    let model = Path::from_string(PROXY_MODEL_STRUCT_PATH).unwrap();
     let coll_name = &model_args.coll_name;
     let register_attributes_function = generate_register_attribute_function(__struct);
     let (impl_generics, type_generics, where_generics) = prepare_generics(&__struct.generics);
@@ -204,12 +231,16 @@ fn generate_model_creator_impl(__struct: &ItemStruct, model_args: &ModelArgs) ->
     }
 }
 
+
+/// this function generates ModelTimestamp traits to update document times when needed
 fn generate_date_times_functions(__struct: &ItemStruct, exists_fields: Vec<&str>) -> proc_macro2::TokenStream {
     let model_name = &__struct.ident;
     let (impl_generics, type_generics, where_generics) = prepare_generics(&__struct.generics);
-    let tr = syn::Path::from_string(MODEL_DT_TRAIT).unwrap();
+    let tr = Path::from_string(MODEL_DT_TRAIT).unwrap();
     let mut qu = quote!();
-    
+
+    //TODO the ModelTimestamps must split into 3 trait (CreatedAt , UpdatedAt , DeletedAt)
+    // because now user cant change them for self
     if exists_fields.iter().any(|x| *x == "created_at") {
         qu = quote! {
                 fn created_at(&mut self){
@@ -253,10 +284,12 @@ fn attr_exists(attrs: &[Attribute], attr_to_compare: &str) -> bool {
     has_it
 }
 
+
+/// this function generate a function to call register attributes in database
 fn generate_register_attribute_function(__struct: &ItemStruct) -> proc_macro2::TokenStream {
     let fields = &__struct.fields;
     let mut indexes = quote!();
-    let model = syn::Path::from_string(PROXY_MODEL_STRUCT_PATH).unwrap();
+    let model = Path::from_string(PROXY_MODEL_STRUCT_PATH).unwrap();
 
     fields.iter().for_each(|field| {
         if attr_exists(&field.attrs, "index") {
@@ -284,6 +317,8 @@ fn generate_register_attribute_function(__struct: &ItemStruct) -> proc_macro2::T
 }
 
 
+/// this function determines that the attribute a custom attribute means
+/// must remove it and replace it with something else
 fn is_custom_attribute(attr: &Attribute) -> bool {
     let custom_attributes = [
         "no_default",
@@ -295,6 +330,25 @@ fn is_custom_attribute(attr: &Attribute) -> bool {
     });
 }
 
+
+/// this function gets syn generics and add needed bounds
+/// ex user define this struct :
+/// ```rust
+/// struct Data<T>{
+///     inner: T
+/// }
+/// ```
+/// this function converts struct to this
+///
+/// ```rust
+/// struct Data<T>
+/// where T: Unpin , T: Sync , T: Default
+/// {
+///     inner: T
+/// }
+/// ```
+/// the bounds are hard coded in NEEDED_BOUNDS variable
+///
 fn prepare_generics(generics: &Generics) -> (ImplGenerics, TypeGenerics, proc_macro2::TokenStream) {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     const NEEDED_BOUNDS: [&str; 7] = [
@@ -334,3 +388,4 @@ fn prepare_generics(generics: &Generics) -> (ImplGenerics, TypeGenerics, proc_ma
     });
     (impl_generics, ty_generics, bounds)
 }
+
