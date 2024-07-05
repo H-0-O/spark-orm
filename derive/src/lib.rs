@@ -34,6 +34,7 @@ macro_rules! parse_nested_meta {
 #[derive(FromMeta, Debug)]
 struct ModelArgs {
     coll_name: String,
+    observer: Option<()>
 }
 
 #[proc_macro_attribute]
