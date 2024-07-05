@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 pub mod util;
+pub mod observer;
 
 
 use std::fmt::Debug;
@@ -9,18 +10,28 @@ use std::sync::Arc;
 use std::time::Duration;
 use mongodb::{Collection, Cursor, Database, IndexModel};
 use mongodb::bson::{doc, Document, to_document};
-use mongodb::options::{DeleteOptions, DropIndexOptions, FindOneOptions, FindOptions, InsertOneOptions, ListIndexesOptions, UpdateOptions};
+use mongodb::options::{
+    DeleteOptions,
+    DropIndexOptions,
+    FindOneOptions,
+    FindOptions,
+    InsertOneOptions,
+    ListIndexesOptions,
+    UpdateOptions
+};
 use serde::de::DeserializeOwned;
 use serde::{Serialize};
-use mongodb::error::Result as MongodbResult;
+use mongodb::error::Result;
 use mongodb::results::UpdateResult;
 use crate::futures::StreamExt;
 use crate::macros::{error, trace};
+use crate::model::observer::Observer;
 use crate::model::util::ModelTimestamps;
 use crate::Spark;
 
 // TODO: this must move to types module
 type Id = mongodb::bson::Bson;
+pub type MongodbResult<T> = Result<T>;
 
 #[derive(Debug, Serialize)]
 pub struct Model<'a, M>
@@ -49,15 +60,16 @@ impl<'a, T: 'a> DerefMut for Model<'a, T> {
 }
 
 impl<'a, M> Model<'a, M>
-    where
-        M: Default,
-        M: Serialize,
-        M: DeserializeOwned,
-        M: Send,
-        M: Sync,
-        M: Unpin,
-        M: Debug,
-        M: ModelTimestamps
+where
+    M: Default,
+    M: Serialize,
+    M: DeserializeOwned,
+    M: Send,
+    M: Sync,
+    M: Unpin,
+    M: Debug,
+    M: ModelTimestamps,
+    M: Observer<M>
 {
     /// makes a model and stores the data and collection_name to creating collection object
     /// to store data into it
@@ -113,10 +125,14 @@ impl<'a, M> Model<'a, M>
                     "_id" : id
                 },
                 doc! { "$set": &converted},
-                None
+                None,
             ).await?;
-             if upsert.modified_count >= 1 {
-                return Ok(owned_id)
+            if upsert.modified_count >= 1 {
+                // dispatch call
+                // this must be pinned to handle recursive async call
+                Box::pin(M::updated(self)).await?;
+
+                return Ok(owned_id);
             };
         }
         converted.remove("_id");
@@ -126,6 +142,11 @@ impl<'a, M> Model<'a, M>
             &*self.inner,
             options,
         ).await?;
+
+        // dispatch observer
+        // this must be pinned to handle recursive async call
+        Box::pin(M::created(self)).await?;
+
         Ok(re.inserted_id)
     }
     pub async fn find_one(&mut self, doc: impl Into<Document>, options: impl Into<Option<FindOneOptions>>)
@@ -193,7 +214,7 @@ impl<'a, M> Model<'a, M>
     ///        None,
     ///    ).await.unwrap();
     ///
-    ///
+    /// NOTE : updated observer doesn't execute in this method
     ///
     pub async fn update(&self, query: impl Into<Document>, doc: impl Into<Document>, options: impl Into<Option<UpdateOptions>>)
                         -> MongodbResult<UpdateResult>
@@ -325,11 +346,16 @@ impl<'a, M> Model<'a, M>
         tokio::task::spawn(wait_for_complete);
     }
 
-    pub async fn delete(&self, query: impl Into<Document>, options: impl Into<Option<DeleteOptions>>) -> MongodbResult<u64> {
+    pub async fn delete(&mut self, query: impl Into<Document>, options: impl Into<Option<DeleteOptions>>) -> MongodbResult<u64> {
         let re = self.collection.delete_one(
             query.into(),
             options,
         ).await?.deleted_count;
+
+        // dispatch observer
+        // this must be pinned to handle recursive async call
+        M::deleted(self).await?;
+
         Ok(re)
     }
 
@@ -340,8 +366,9 @@ impl<'a, M> Model<'a, M>
 
 
 impl<'a, M> Model<'a, M>
-    where M: Default,
-          M: Serialize
+where
+    M: Default,
+    M: Serialize,
 {
     /// this method takes the inner and gives you ownership of inner then
     /// replace it with default value
@@ -349,11 +376,11 @@ impl<'a, M> Model<'a, M>
         std::mem::take(&mut *self.inner)
     }
 
-    pub fn inner_ref(&self) -> &M{
+    pub fn inner_ref(&self) -> &M {
         self.inner.as_ref()
     }
 
-    pub fn inner_mut(&mut self)-> &mut M {
+    pub fn inner_mut(&mut self) -> &mut M {
         self.inner.as_mut()
     }
 
@@ -367,8 +394,8 @@ impl<'a, M> Model<'a, M>
 // converts
 
 impl<'a, M> From<Model<'a, M>> for Document
-    where
-        M: Serialize,
+where
+    M: Serialize,
 {
     fn from(value: Model<M>) -> Self {
         mongodb::bson::to_document(&value.inner).unwrap()
@@ -376,8 +403,8 @@ impl<'a, M> From<Model<'a, M>> for Document
 }
 
 impl<'a, M> From<&Model<'a, M>> for Document
-    where
-        M: Serialize
+where
+    M: Serialize,
 {
     fn from(value: &Model<'a, M>) -> Self {
         mongodb::bson::to_document(&value.inner).unwrap()
@@ -385,8 +412,8 @@ impl<'a, M> From<&Model<'a, M>> for Document
 }
 
 impl<'a, M> From<&mut Model<'a, M>> for Document
-    where
-        M: Serialize
+where
+    M: Serialize,
 {
     fn from(value: &mut Model<'a, M>) -> Self {
         mongodb::bson::to_document(&value.inner).unwrap()

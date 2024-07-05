@@ -8,7 +8,8 @@ use crate::{ModelArgs};
 use crate::utility::GeneratorResult;
 
 const PROXY_MODEL_STRUCT_PATH: &str = "spark_orm::model::Model";
-const MODEL_DT_TRAIT: &str = "spark_orm::model::util::ModelTimestamps";
+const MODEL_TIMESTAMPS_TRAIT_PATH: &str = "spark_orm::model::util::ModelTimestamps";
+const MODEL_OBSERVER_TRAIT_PATH: &str = "spark_orm::model::observer::Observer";
 
 pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResult<TokenStream> {
     let ident = &__struct.ident;
@@ -28,7 +29,11 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
     //model creator implement
     let model_creator = generate_model_creator_impl(__struct, model_args);
 
+    //this generates From trait to convert to document
     let from_to_document_trait = generate_from_to_document_trait(__struct);
+
+    //this generates Observer<T> trait if user does' fill the observer
+    let observer_trait = generate_observer_trait(__struct , model_args);
 
     // this there lines first inspect that the user defined timestamp or not then create fields
     // for them and after that defines the update method for them
@@ -49,7 +54,8 @@ pub fn generate(__struct: &ItemStruct, model_args: &ModelArgs) -> GeneratorResul
             #from_to_document_trait
 
             #date_time_functions
-        
+
+            #observer_trait
         ).into()
     )
 }
@@ -236,7 +242,7 @@ fn generate_model_creator_impl(__struct: &ItemStruct, model_args: &ModelArgs) ->
 fn generate_date_times_functions(__struct: &ItemStruct, exists_fields: Vec<&str>) -> proc_macro2::TokenStream {
     let model_name = &__struct.ident;
     let (impl_generics, type_generics, where_generics) = prepare_generics(&__struct.generics);
-    let tr = Path::from_string(MODEL_DT_TRAIT).unwrap();
+    let tr = Path::from_string(MODEL_TIMESTAMPS_TRAIT_PATH).unwrap();
     let mut qu = quote!();
 
     //TODO the ModelTimestamps must split into 3 trait (CreatedAt , UpdatedAt , DeletedAt)
@@ -316,6 +322,20 @@ fn generate_register_attribute_function(__struct: &ItemStruct) -> proc_macro2::T
     )
 }
 
+/// this function first checks that user wants to use observer or not
+/// if user wants we don't generate trait unless we generate just trait with its default functions
+fn generate_observer_trait(__struct: &ItemStruct , args: &ModelArgs) -> proc_macro2::TokenStream{
+
+    if args.observer.is_none() {
+        let observer_trait = Path::from_string(MODEL_OBSERVER_TRAIT_PATH).unwrap();
+        let model_name = &__struct.ident;
+        let (impl_generics, type_generics, where_generics) = prepare_generics(&__struct.generics);
+        return quote!(
+          impl #impl_generics #observer_trait<#model_name #type_generics>  for #model_name #where_generics {}
+        );
+    }
+    quote!()
+}
 
 /// this function determines that the attribute a custom attribute means
 /// must remove it and replace it with something else
