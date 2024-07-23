@@ -1,10 +1,10 @@
 use proc_macro::TokenStream;
-use darling::{FromMeta};
+use darling::FromMeta;
 
 use quote::{quote, ToTokens};
 use syn::{Attribute, Generics, ImplGenerics, ItemStruct, Path, Type, TypeGenerics};
 use syn::GenericParam;
-use crate::{ModelArgs};
+use crate::ModelArgs;
 use crate::utility::GeneratorResult;
 
 const PROXY_MODEL_STRUCT_PATH: &str = "spark_orm::model::Model";

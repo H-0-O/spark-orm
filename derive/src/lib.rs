@@ -7,9 +7,8 @@ extern crate syn;
 
 use proc_macro::TokenStream;
 
-use darling::{FromMeta};
-use syn::{ItemStruct, parse_macro_input};
-
+use darling::FromMeta;
+use syn::{parse_macro_input, ItemStruct};
 
 mod model;
 mod utility;
@@ -34,14 +33,14 @@ macro_rules! parse_nested_meta {
 #[derive(FromMeta, Debug)]
 struct ModelArgs {
     coll_name: String,
-    observer: Option<()>
+    observer: Option<()>,
 }
 
 #[proc_macro_attribute]
 #[allow(non_snake_case)]
 pub fn Model(args: TokenStream, item: TokenStream) -> TokenStream {
     let __struct = parse_macro_input!(item as ItemStruct);
-    let model_args = parse_nested_meta!(ModelArgs , args);
+    let model_args = parse_nested_meta!(ModelArgs, args);
     match model::generate(&__struct, &model_args) {
         Ok(expanded) => expanded,
         Err(err) => err.write_errors().into(),
