@@ -1,41 +1,34 @@
 #![allow(dead_code)]
 
-pub mod util;
 pub mod observer;
+pub mod util;
 
-
-use std::fmt::Debug;
-use std::ops::{Deref, DerefMut};
-use std::sync::Arc;
-use std::time::Duration;
-use mongodb::{Collection, Cursor, Database, IndexModel};
-use mongodb::bson::{doc, Document, to_document};
-use mongodb::options::{
-    DeleteOptions,
-    DropIndexOptions,
-    FindOneOptions,
-    FindOptions,
-    InsertOneOptions,
-    ListIndexesOptions,
-    UpdateOptions
-};
-use serde::de::DeserializeOwned;
-use serde::{Serialize};
-use mongodb::error::Result;
-use mongodb::results::UpdateResult;
 use crate::futures::StreamExt;
 use crate::macros::{error, trace};
 use crate::model::observer::Observer;
 use crate::model::util::ModelTimestamps;
 use crate::Spark;
+use mongodb::bson::{doc, to_document, Document};
+use mongodb::error::Result;
+use mongodb::options::{
+    DeleteOptions, DropIndexOptions, FindOneOptions, FindOptions, InsertOneOptions,
+    ListIndexesOptions, UpdateOptions,
+};
+use mongodb::results::UpdateResult;
+use mongodb::{Collection, Cursor, Database, IndexModel};
+use serde::de::DeserializeOwned;
+use serde::Serialize;
+use std::fmt::Debug;
+use std::ops::{Deref, DerefMut};
+use std::sync::Arc;
+use std::time::Duration;
 
 // TODO: this must move to types module
 type Id = mongodb::bson::Bson;
 pub type MongodbResult<T> = Result<T>;
 
 #[derive(Debug, Serialize)]
-pub struct Model<'a, M>
-{
+pub struct Model<'a, M> {
     inner: Box<M>,
     #[serde(skip)]
     db: Arc<Database>,
@@ -69,7 +62,7 @@ where
     M: Unpin,
     M: Debug,
     M: ModelTimestamps,
-    M: Observer<M>
+    M: Observer<M>,
 {
     /// makes a model and stores the data and collection_name to creating collection object
     /// to store data into it
@@ -112,21 +105,25 @@ where
     }
 
     /// saves the change , if the inner has some _id then it's update the existing unless
-    /// it's create  new document 
-    pub async fn save(&mut self, options: impl Into<Option<InsertOneOptions>>)
-                      -> MongodbResult<Id>
-    {
+    /// it's create  new document
+    pub async fn save(
+        &mut self,
+        options: impl Into<Option<InsertOneOptions>>,
+    ) -> MongodbResult<Id> {
         self.inner.updated_at();
         let mut converted = to_document(&self.inner)?;
         if let Some(id) = converted.get("_id") {
             let owned_id = id.to_owned();
-            let upsert = self.collection.update_one(
-                doc! {
-                    "_id" : id
-                },
-                doc! { "$set": &converted},
-                None,
-            ).await?;
+            let upsert = self
+                .collection
+                .update_one(
+                    doc! {
+                        "_id" : id
+                    },
+                    doc! { "$set": &converted},
+                    None,
+                )
+                .await?;
             if upsert.modified_count >= 1 {
                 // dispatch call
                 // this must be pinned to handle recursive async call
@@ -138,10 +135,7 @@ where
         converted.remove("_id");
         self.inner.created_at();
 
-        let re = self.collection.insert_one(
-            &*self.inner,
-            options,
-        ).await?;
+        let re = self.collection.insert_one(&*self.inner, options).await?;
 
         // dispatch observer
         // this must be pinned to handle recursive async call
@@ -149,27 +143,22 @@ where
 
         Ok(re.inserted_id)
     }
-    pub async fn find_one(&mut self, doc: impl Into<Document>, options: impl Into<Option<FindOneOptions>>)
-                          -> MongodbResult<Option<&mut Self>>
-    {
-        let result = self.collection.find_one(
-            Some(doc.into()),
-            options,
-        ).await?;
+    pub async fn find_one(
+        &mut self,
+        doc: impl Into<Document>,
+        options: impl Into<Option<FindOneOptions>>,
+    ) -> MongodbResult<Option<&mut Self>> {
+        let result = self.collection.find_one(Some(doc.into()), options).await?;
         match result {
             Some(inner) => {
                 self.fill(inner);
-                Ok(
-                    Some(
-                        self
-                    )
-                )
+                Ok(Some(self))
             }
-            None => Ok(None)
+            None => Ok(None),
         }
     }
 
-    /// this is raw update , and you can pass document or your model 
+    /// this is raw update , and you can pass document or your model
     /// # Examples
     /// ## with the raw doc
     ///  ```
@@ -184,9 +173,9 @@ where
     ///             }
     ///         },
     ///         None,
-    ///     ).await.unwrap(); 
+    ///     ).await.unwrap();
     /// ```
-    /// ## with the model 
+    /// ## with the model
     /// let user_model = User::new_model(Some(&db));
     ///     let mut sample_user = User::default();
     ///     sample_user.name = "Hossein 33".to_string();
@@ -200,7 +189,7 @@ where
     ///        None,
     ///    ).await.unwrap();
     ///
-    /// ## with_model_instance 
+    /// ## with_model_instance
     ///     let mut user_model = User::new_model(Some(&db));
     ///    user_model.name = "Hossein 3355".to_string();
     ///    user_model.age = 58;
@@ -216,28 +205,30 @@ where
     ///
     /// NOTE : updated observer doesn't execute in this method
     ///
-    pub async fn update(&self, query: impl Into<Document>, doc: impl Into<Document>, options: impl Into<Option<UpdateOptions>>)
-                        -> MongodbResult<UpdateResult>
-    {
-        self.collection.update_one(
-            query.into(),
-            doc.into(),
-            options,
-        ).await
+    pub async fn update(
+        &self,
+        query: impl Into<Document>,
+        doc: impl Into<Document>,
+        options: impl Into<Option<UpdateOptions>>,
+    ) -> MongodbResult<UpdateResult> {
+        self.collection
+            .update_one(query.into(), doc.into(), options)
+            .await
     }
 
-    pub async fn find(&self, filter: impl Into<Document>, options: impl Into<Option<FindOptions>>)
-                      -> MongodbResult<Cursor<M>>
-    {
-        self.collection.find(
-            Some(filter.into()),
-            options,
-        ).await
+    pub async fn find(
+        &self,
+        filter: impl Into<Document>,
+        options: impl Into<Option<FindOptions>>,
+    ) -> MongodbResult<Cursor<M>> {
+        self.collection.find(Some(filter.into()), options).await
     }
 
-    pub async fn find_and_collect(&self, filter: impl Into<Document>, options: impl Into<Option<FindOptions>>)
-                                  -> MongodbResult<Vec<MongodbResult<M>>>
-    {
+    pub async fn find_and_collect(
+        &self,
+        filter: impl Into<Document>,
+        options: impl Into<Option<FindOptions>>,
+    ) -> MongodbResult<Vec<MongodbResult<M>>> {
         // TODO write this in other functions
         let converted = filter.into();
         let doc = if converted.is_empty() {
@@ -246,17 +237,15 @@ where
             Some(converted)
         };
 
-        let future = self.collection.find(
-            doc,
-            options,
-        ).await?;
+        let future = self.collection.find(doc, options).await?;
         Ok(future.collect().await)
     }
 
-
-    pub fn register_attributes(&self, attributes: Vec<&str>)
-    {
-        let mut attrs = attributes.iter().map(|attr| attr.to_string()).collect::<Vec<String>>();
+    pub fn register_attributes(&self, attributes: Vec<&str>) {
+        let mut attrs = attributes
+            .iter()
+            .map(|attr| attr.to_string())
+            .collect::<Vec<String>>();
         let max_time_to_drop = Some(Duration::from_secs(5));
         let (tx, _) = tokio::sync::oneshot::channel();
         let db = self.db.clone();
@@ -264,13 +253,13 @@ where
         trace!("Spawn task to register indexes");
         let register_attrs = async move {
             let coll = db.collection::<M>(&coll_name);
-            let previous_indexes = coll.list_indexes(
-                Some(
-                    ListIndexesOptions::builder().max_time(
-                        max_time_to_drop
-                    ).build()
-                )
-            ).await;
+            let previous_indexes = coll
+                .list_indexes(Some(
+                    ListIndexesOptions::builder()
+                        .max_time(max_time_to_drop)
+                        .build(),
+                ))
+                .await;
 
             let mut keys_to_remove = Vec::new();
 
@@ -285,53 +274,48 @@ where
                                         attrs.remove(pos);
                                     } else if let Some(rw) = &index_model.options {
                                         // means the attribute must remove because not exists in struct
-                                        keys_to_remove.push(
-                                            rw.name.clone()
-                                        )
+                                        keys_to_remove.push(rw.name.clone())
                                     }
                                 }
                             });
                         }
                         Err(error) => {
-                            error!(
-                                "Can't unpack index model {error}"
-                            );
+                            error!("Can't unpack index model {error}");
                         }
                     }
                     futures::future::ready(())
                 });
                 foreach_future.await;
             }
-            let attrs = attrs.iter()
+            let attrs = attrs
+                .iter()
                 .map(|attr| {
                     let key = attr.to_string();
-                    IndexModel::builder().keys(
-                        doc! {
-                                key : 1
-                            }
-                    ).build()
-                }).collect::<Vec<IndexModel>>();
+                    IndexModel::builder()
+                        .keys(doc! {
+                            key : 1
+                        })
+                        .build()
+                })
+                .collect::<Vec<IndexModel>>();
 
             for name in keys_to_remove {
                 let key = name.as_ref().unwrap();
-                let _ = coll.drop_index(key,
-                                        Some(
-                                            DropIndexOptions::builder().max_time(
-                                                max_time_to_drop
-                                            ).build()
-                                        ),
-                ).await;
+                let _ = coll
+                    .drop_index(
+                        key,
+                        Some(
+                            DropIndexOptions::builder()
+                                .max_time(max_time_to_drop)
+                                .build(),
+                        ),
+                    )
+                    .await;
             }
             if !attrs.is_empty() {
-                let result = coll.create_indexes(
-                    attrs,
-                    None,
-                ).await;
+                let result = coll.create_indexes(attrs, None).await;
                 if let Err(error) = result {
-                    error!(
-                            "Can't create indexes : {:?}" ,
-                            error
-                        );
+                    error!("Can't create indexes : {:?}", error);
                 }
             }
         };
@@ -346,11 +330,16 @@ where
         tokio::task::spawn(wait_for_complete);
     }
 
-    pub async fn delete(&mut self, query: impl Into<Document>, options: impl Into<Option<DeleteOptions>>) -> MongodbResult<u64> {
-        let re = self.collection.delete_one(
-            query.into(),
-            options,
-        ).await?.deleted_count;
+    pub async fn delete(
+        &mut self,
+        query: impl Into<Document>,
+        options: impl Into<Option<DeleteOptions>>,
+    ) -> MongodbResult<u64> {
+        let re = self
+            .collection
+            .delete_one(query.into(), options)
+            .await?
+            .deleted_count;
 
         // dispatch observer
         // this must be pinned to handle recursive async call
@@ -363,7 +352,6 @@ where
         *self.inner = inner;
     }
 }
-
 
 impl<'a, M> Model<'a, M>
 where
@@ -389,7 +377,6 @@ where
         Ok(re)
     }
 }
-
 
 // converts
 
