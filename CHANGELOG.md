@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.1] - 2024-07-24
+
+### Fixed
+- **Observer Trait** : fix default observer trait implementation for Model has generic field
+
+
 ## [0.3.0] - 2024-07-05
 
 ### Added
