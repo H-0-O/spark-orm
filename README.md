@@ -156,5 +156,61 @@ Define index or unique attributes for struct fields:
 
 These indexes are registered during the first initiation of Product.
 
+## The Model Observer
+
+you call set observer for some operations in model
+
+to use the observer you just need to put `observer` in `Model` macro ex : `#[Model(coll_name='users' , observer)]`
+
+and implement the `Observer<T>` for your model , supported method are **created** , **updated** , **deleted**
+
+```rust
+    
+#[Model(coll_name = "users", observer)]
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct User {
+    name: String,
+}
+
+#[Model(coll_name = "persons", observer)]
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct Person {
+    name: String,
+}
+
+
+impl Observer<User> for User {
+    async fn created(model: &mut Model<'_, User>) -> MongodbResult<()> {
+        let mut person_model = Person::new_model(None);
+        if model.name == "Hello".to_string() {
+            model.name = "Something".to_string();
+            model.save(None).await?;
+        }
+        person_model.name = "Naruto".to_string();
+        person_model.save(None).await?;
+        Ok(())
+    }
+}
+
+#[allow(clippy::assigning_clones)]
+impl Observer<Person> for Person {
+    async fn created(model: &mut Model<'_, Person>) -> MongodbResult<()> {
+        let mut jobs = Jobs::new_model(None);
+        jobs.person.name = model.name.clone();
+        jobs.save(None).await?;
+        Ok(())
+    }
+
+    async fn updated(model: &mut Model<'_, Person>) -> MongodbResult<()> {
+        Ok(())
+    }
+
+    async fn deleted(model: &mut Model<'_, Person>) -> MongodbResult<()> {
+        Ok(())
+    }
+}
+
+```
+
 ### I would greatly appreciate your support on GitHub. Please consider giving me a [star](https://github.com/H-0-O/spark-orm.git) to show your support. Thank you! 
 #  Note the library is under development and may have lots of changes in the future, even in its basics

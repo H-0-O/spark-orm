@@ -10,23 +10,24 @@ use crate::model::{Model, MongodbResult};
 /// }
 /// ```
 
-
 #[allow(async_fn_in_trait)]
 #[allow(unused)]
 pub trait Observer<M> {
-
     /// this call when document is created , in these observers can't call save again
+    #[inline]
     async fn created(model: &mut Model<'_, M>) -> MongodbResult<()> {
         Ok(())
     }
 
     /// this call when document is updated
     /// it just called when user uses save method not update method
+    #[inline]
     async fn updated(model: &mut Model<'_, M>) -> MongodbResult<()> {
         Ok(())
     }
 
     /// this call when document is delete
+    #[inline]
     async fn deleted(model: &mut Model<'_, M>) -> MongodbResult<()> {
         Ok(())
     }
