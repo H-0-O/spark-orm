@@ -1,4 +1,6 @@
 use std::sync::Arc;
+use env_logger::Env;
+use log::debug;
 use mongodb::{Client, Database};
 use once_cell::sync::OnceCell;
 
@@ -74,7 +76,10 @@ impl Spark {
     pub fn use_db(){
         
     }
+
     fn init_logger() {
-        env_logger::init();
+        if let Err(err) = env_logger::try_init_from_env(Env::new().default_filter_or("info")) {
+            debug!("The logger has already been initialized. {err}")
+        }
     }
 }
