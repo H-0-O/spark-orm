@@ -13,7 +13,7 @@ macro_rules! trace {
 
 macro_rules! error {
     (target: $target:expr, $($arg:tt)+) => {
-        log::error!(targjt: $target , $($arg)+);
+        log::error!(target: $target , $($arg)+);
     };
     ($($arg:tt)+) => {
         log::error!($($arg)+);
